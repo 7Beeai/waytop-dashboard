@@ -1,5 +1,14 @@
 # Conector Instagram da avaliação de perfil
 
+## Busca pelo @ (padrão desde 13/11)
+
+Na avaliação, digite o @ do candidato e clique em **Buscar pelo @**. O servidor consulta o perfil público pela API da Meta (Business Discovery) e preenche nome, seguidores e curtidas + comentários por post (média dos últimos 12). Alcance dos stories e público (Brasil, 18–34) não são públicos: ficam à mão.
+
+- Só funciona com contas profissionais (Criador ou Comercial). Perfil pessoal não retorna nada.
+- Configuração única: clique em **Conectar conta da WAYTOP** e entre com o Instagram profissional da WAYTOP. O acesso fica em /var/lib/waytop-ig/conta.json (só o serviço lê). Para trocar de conta, apague esse arquivo no servidor.
+
+O fluxo antigo, em que o candidato entra com a conta dele (`/api/ig/login`), continua no servidor, mas não aparece mais na página.
+
 O candidato clica em **Conectar Instagram do candidato** no dashboard, entra com a conta dele e autoriza. O servidor lê os números e devolve ao formulário, que calcula a nota. Nenhum token fica guardado.
 
 O botão só funciona na versão hospedada (waytop.7bee.ai). Na versão do Claude o formulário é manual.
