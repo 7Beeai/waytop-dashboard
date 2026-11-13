@@ -986,7 +986,7 @@ function renderAval(){
   const meus = avLoad().map((c,k)=>({...c, k}));
   const todos = [...meus, ...CAND];
   table("tbl-aval",[{t:"Candidato"},{t:"Nicho"},{t:"Seguidores",num:1},{t:"Engajamento",num:1},{t:"Alcance stories",num:1},{t:"Público BR",num:1},{t:"18–34 anos",num:1},{t:"Nota",num:1},{t:"Parecer"},{t:""}],
-    todos.sort((x,y)=>nota(y)-nota(x)).map(c=>{const n=nota(c);return `<tr><td class="who"><b>${esc(c.nome||c.h)}</b><small>${esc(c.h)}${c.k!==undefined?` · avaliado em ${c.dt}`:' · exemplo'}</small></td><td>${esc(c.cat||"–")}</td>
+    todos.sort((x,y)=>nota(y)-nota(x)).map(c=>{const n=nota(c);return `<tr><td class="who"><b>${esc(c.nome||c.h)}</b><small>${esc(c.h)}${c.k!==undefined?` · ${c.ig?"Instagram autorizado":"avaliado"} em ${c.dt}`:' · exemplo'}${c.falta&&c.falta.length?` · <span style="color:var(--warn)">sem ${esc(c.falta.join(", "))}</span>`:""}</small></td><td>${esc(c.cat||"–")}</td>
       <td class="num">${N(c.seg)}</td><td class="num">${pct1(c.eng)}</td><td class="num">${pct1(c.alc)}</td><td class="num">${pct1(c.br)}</td><td class="num">${pct1(c.idade)}</td>
       <td class="num">${scoreHTML(n)}</td><td>${parecer(n)}</td><td>${c.k!==undefined?`<button type="button" class="x-del" data-del="${c.k}" aria-label="Remover ${esc(c.h)}">×</button>`:''}</td></tr>`;}));
 }
@@ -1032,13 +1032,32 @@ function renderPed(){
     return `<tr><td><b>${esc(p.h)}</b>${p.conta&&p.conta.toLowerCase()!==p.h.toLowerCase()?`<br><small style="color:var(--muted)">autorizou com ${esc(p.conta)}</small>`:""}</td><td>${new Date(p.criado).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td><td>${ST[p.status]||esc(p.status)}</td><td><span class="acts">${acts}<button class="btn sm" data-delp="${i}" title="Excluir pedido">×</button></span></td></tr>`;
   }).join("")}</tbody>`;
 }
+/* Aprovado entra sozinho em "Candidatos em análise" (sem nicho; o que não veio do Instagram conta como 0 até ser preenchido) */
+/* Nicho sugerido pela bio e legendas (o Instagram não informa); dá para trocar no formulário */
+const NICHOS=[["Viagem",/viag|trip|travel|mochil|destino|turism/],["Humor",/humor|comédia|comedia|piada|meme|zoeira|rir/],["Moda e beleza",/moda|look|beleza|make|maquiag|skin|fashion|estilo/],["Fitness",/fit|treino|academia|gym|muscula|crossfit|corrida/],["Gastronomia",/receita|culin|food|comida|chef|gastro|cozinh/],["Educação",/educa|aula|professor|ensin|estud|curso|aprend|inglês|ingles|idioma/],["Negócios",/empreend|negócio|negocio|marketing|vendas|finan|invest|dinheiro/],["Tecnologia",/tecnolog|tech|dev|program|games|gamer|app/],["Família",/mãe|mae|pai|família|familia|filh|bebê|bebe|gêmeas|gemeas|irmãs|irmas|kids/],["Música",/músic|music|cantor|cantora|banda|dj/],["Esporte",/futebol|esporte|atleta|vôlei|volei|basquete|surf|skate/],["Lifestyle",/lifestyle|rotina|vlog|dia a dia|daily/]];
+function nichoDe(d){
+  const t=((d.bio||"")+" "+(d.nome||"")+" "+(d.ultimos||[]).map(m=>m.legenda||"").join(" ")).toLowerCase();
+  let best="", n=0; for(const [nome,re] of NICHOS){ const k=(t.match(new RegExp(re.source,"g"))||[]).length; if(k>n){ n=k; best=nome; } }
+  return best;
+}
+function pedParaLista(d){
+  const n=v=>typeof v==="number"?v:NaN, seg=n(d.seg), inter=n(d.inter);
+  if(!(seg>0)) return;
+  const falta=[isNaN(n(d.alcN))&&"stories", isNaN(n(d.br))&&"Brasil", isNaN(n(d.idade))&&"18–34"].filter(Boolean);
+  const l=avLoad(), old=l.find(x=>x.h.toLowerCase()===d.h.toLowerCase());
+  const c={h:d.h, nome:d.nome||"", cat:old?.cat||nichoDe(d), seg, eng:inter>=0?inter/seg*100:0, alc:n(d.alcN)>=0?n(d.alcN)/seg*100:0, br:n(d.br)>=0?n(d.br):0, idade:n(d.idade)>=0?n(d.idade):0, dt:dd(TODAY), ig:1, falta};
+  avSave([c, ...l.filter(x=>x!==old)]); renderAval();
+}
 async function pedAtualizar(){
   const l=pedLoad(); let mudou=false;
+  for(const p of l) if(p.status==="aprovado" && !p.nalista){
+    try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(d.dados){ pedParaLista(d.dados); p.nalista=1; mudou=true; } }catch(e){}
+  }
   for(const p of l) if(p.status==="aguardando"){
     try{ const r=await fetch("/api/ig/pedido/"+p.id); if(r.status===404){ p.status="recusado"; mudou=true; continue; }
       const d=await r.json(); if(d.status!==p.status){ Object.assign(p,{status:d.status,conta:d.conta||""}); mudou=true; } }catch(e){}
   }
-  if(mudou){ pedSave(l); renderPed(); }
+  if(mudou){ pedSave(l); renderPed(); if(l.some(p=>p.status==="aprovado"&&!p.nalista)) pedAtualizar(); }
 }
 function renderDet(p, d){
   const c=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
@@ -1051,8 +1070,10 @@ function renderDet(p, d){
   const f=$("av-form");
   for(const k of ["h","nome","seg","inter","alcN","br","idade"]) f.elements[k].value = d[k]!=null&&d[k]!==""?d[k]:"";
   avPaint();
-  const falta=[...(d.faltam||[]),"nicho"];
-  igMsg("warn","preencher à mão: "+falta.join(", "));
+  const sug=nichoDe(d); f.elements.cat.value=sug;
+  const falta=[...(d.faltam||[]), ...(sug?[]:["nicho"])];
+  if(falta.length) igMsg("warn","preencher à mão: "+falta.join(", ")); else igMsg("","");
+  if(sug) igMsg("", "nicho sugerido pela bio: "+sug+(falta.length?" · preencher à mão: "+falta.join(", "):""));
   f.elements.cat.focus();
   $("ig-det").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -1072,7 +1093,7 @@ if(IG_ON){
     if(t.dataset.copy!=null){ const p=l[+t.dataset.copy]; try{ await navigator.clipboard.writeText(p.link); t.textContent="Copiado ✓"; }catch(err){ prompt("Copie o link:", p.link); } return; }
     if(t.dataset.delp!=null){ const p=l[+t.dataset.delp]; if(!confirm(`Excluir o pedido de ${p.h}? Os dados dele saem do servidor.`)) return; fetch("/api/ig/pedido/"+p.id,{method:"DELETE"}).catch(()=>{}); l.splice(+t.dataset.delp,1); pedSave(l); renderPed(); return; }
     if(t.dataset.ver!=null){ const p=l[+t.dataset.ver]; t.disabled=true;
-      try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(!r.ok||!d.dados) throw new Error(d.erro||"sem dados"); renderDet(p,d.dados); }catch(err){ igMsg("bad",err.message); }
+      try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(!r.ok||!d.dados) throw new Error(d.erro||"sem dados"); renderDet(p,d.dados); pedParaLista(d.dados); }catch(err){ igMsg("bad",err.message); }
       t.disabled=false; }
   });
   pedAtualizar(); setInterval(pedAtualizar, 15000);
