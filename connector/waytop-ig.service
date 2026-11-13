@@ -1,0 +1,15 @@
+# /etc/systemd/system/waytop-ig.service
+# sudo systemctl daemon-reload && sudo systemctl enable --now waytop-ig
+[Unit]
+Description=WAYTOP - conector Instagram da avaliacao de perfil
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/waytop-ig.env
+ExecStart=/usr/bin/node /opt/waytop-ig/server.js
+Restart=always
+User=www-data
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
