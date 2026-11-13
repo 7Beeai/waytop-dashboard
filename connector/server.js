@@ -65,6 +65,51 @@ async function j(url, opt) {
 }
 const tryJ = (url) => j(url).catch(() => null);
 
+// Stories no ar agora, com o alcance de cada um
+async function lerStories(igId, t) {
+  const st = await tryJ(`${GRAPH}/${igId}/stories?fields=id,timestamp&limit=50&${t}`);
+  const out = [];
+  for (const s of (st?.data || []).slice(0, 50)) {
+    const ins = await tryJ(`${GRAPH}/${s.id}/insights?metric=reach&${t}`);
+    const v = ins?.data?.[0]?.values?.[0]?.value ?? ins?.data?.[0]?.total_value?.value;
+    if (typeof v === "number") out.push({ id: s.id, ts: s.timestamp || new Date().toISOString(), reach: v });
+  }
+  return out;
+}
+
+// Coleta de stories por 7 dias depois da autorização (a cada 6 h). O acesso do candidato fica só no servidor e é apagado no fim.
+const DIAS_COLETA = 7, DIA = 864e5;
+const diaBR = iso => new Date(new Date(iso).getTime() - 3 * 36e5).toISOString().slice(0, 10);
+function resumoStories(p) {
+  const l = Object.values(p.st || {});
+  const ini = new Date(p.coleta.inicio).getTime(), fim = Math.min(Date.now(), new Date(p.coleta.fim).getTime());
+  const dias = Math.max(1, Math.min(DIAS_COLETA, Math.ceil((fim - ini) / DIA)));
+  const porDia = {};
+  for (const x of l) { const d = diaBR(x.ts); (porDia[d] = porDia[d] || { n: 0, alcance: 0 }); porDia[d].n++; porDia[d].alcance += x.reach; }
+  p.dados.alcN = l.length ? Math.round(l.reduce((a, x) => a + x.reach, 0) / l.length) : "";
+  p.dados.stories = { n: l.length, dias, por_dia: l.length ? Math.round(l.length / dias * 10) / 10 : 0, dias_lista: porDia,
+    coletando: !p.coleta.encerrada, ate: p.coleta.fim, erro: p.coleta.erro || "" };
+}
+async function coletar() {
+  let arqs = [];
+  try { arqs = fs.readdirSync(PED).filter(f => f.endsWith(".json")); } catch { return; }
+  for (const f of arqs) {
+    const p = lerPed(f.slice(0, -5));
+    if (!p || !p.token || !p.coleta || p.coleta.encerrada) continue;
+    try {
+      if (Date.now() > new Date(p.coleta.fim).getTime()) { p.coleta.encerrada = true; delete p.token; }
+      else {
+        const novos = await lerStories(p.ig, `access_token=${encodeURIComponent(p.token)}`);
+        p.st = p.st || {};
+        for (const x of novos) p.st[x.id] = { ts: x.ts, reach: Math.max(x.reach, p.st[x.id]?.reach || 0) };
+        p.coleta.ultima = new Date().toISOString(); p.coleta.erro = "";
+      }
+    } catch (e) { p.coleta.erro = e.message.slice(0, 120); console.error(new Date().toISOString(), "coleta", p.h, e.message); }
+    resumoStories(p); salvarPed(p);
+  }
+}
+const pub = p => { const { token, ig, st, ...r } = p; return r; };
+
 async function medir(token) {
   const t = `access_token=${encodeURIComponent(token)}`;
   // O token é do "usuário do sistema" da empresa do candidato; a conta do Instagram vem por assigned_instagram_accounts
@@ -89,18 +134,10 @@ async function medir(token) {
   const lista = posts.map(m => ({ data: (m.timestamp || "").slice(0, 10), tipo: m.media_product_type === "REELS" ? "Reels" : m.media_type === "CAROUSEL_ALBUM" ? "Carrossel" : m.media_type === "VIDEO" ? "Vídeo" : "Foto",
     curtidas: m.like_count ?? null, comentarios: m.comments_count ?? null, alcance: m.reach ?? null, salvos: m.saved ?? null, link: m.permalink || "", legenda: (m.caption || "").slice(0, 90) }));
 
-  // Alcance dos stories: a API só lista stories ativos (últimas 24 h). Média do alcance deles, se houver.
+  // Stories: a API só lista stories no ar (últimas 24 h). A coleta continua por 7 dias (ver coletar()).
+  const stories = await lerStories(ig.id, t);
   let alcN = "";
-  const st = await tryJ(`${GRAPH}/${ig.id}/stories?fields=id&${t}`);
-  if (st?.data?.length) {
-    const reaches = [];
-    for (const s of st.data.slice(0, 20)) {
-      const ins = await tryJ(`${GRAPH}/${s.id}/insights?metric=reach&${t}`);
-      const v = ins?.data?.[0]?.values?.[0]?.value ?? ins?.data?.[0]?.total_value?.value;
-      if (typeof v === "number") reaches.push(v);
-    }
-    if (reaches.length) alcN = Math.round(reaches.reduce((a, b) => a + b, 0) / reaches.length);
-  }
+  if (stories.length) alcN = Math.round(stories.reduce((a, x) => a + x.reach, 0) / stories.length);
 
   // Público: país e idade dos seguidores (exige 100+ seguidores e a permissão instagram_manage_insights)
   const demo = async (bd) => {
@@ -124,7 +161,6 @@ async function medir(token) {
   if (cid.tot) cidades = cid.res.sort((a, b) => b.value - a.value).map(r => ({ nome: r.dimension_values?.[0] || "", pct: Math.round(r.value / cid.tot * 1000) / 10 }));
   const faltam = [];
   if (inter === "") faltam.push("curtidas e comentários");
-  if (alcN === "") faltam.push("alcance dos stories (sem story ativo agora)");
   if (br === "") faltam.push("público no Brasil");
   if (idade === "") faltam.push("público de 18 a 34");
   return { h: "@" + (me.username || ig.username), nome: me.name || "", bio: me.biography || "", site: me.website || "", foto: me.profile_picture_url || "",
@@ -132,7 +168,7 @@ async function medir(token) {
     curtidas: media_("like_count"), comentarios: media_("comments_count"), alcance_post: posts.some(m => m.reach != null) ? media_("reach") : "", salvos: posts.some(m => m.saved != null) ? media_("saved") : "",
     eng: seg && inter !== "" ? Math.round(inter / seg * 1000) / 10 : "", por_semana: dias ? Math.round(posts.length / dias * 7 * 10) / 10 : "",
     reels: posts.length ? Math.round(posts.filter(m => m.media_product_type === "REELS").length / posts.length * 100) : "",
-    alcN, br, idade, genero, cidades, ultimos: lista, faltam };
+    alcN, br, idade, genero, cidades, ultimos: lista, faltam, _ig: ig.id, _stories: stories };
 }
 
 http.createServer(async (req, res) => {
@@ -151,13 +187,13 @@ http.createServer(async (req, res) => {
       const p = lerPed(m[1]);
       if (!p) return json(res, 404, { erro: "pedido não encontrado" });
       if (req.method === "DELETE") { fs.rmSync(pedArq(p.id), { force: true }); return json(res, 200, { ok: true }); }
-      return json(res, 200, { ...p, link: new URL(`/api/ig/autorizar/${p.id}`, DASH_URL).href });
+      return json(res, 200, { ...pub(p), link: new URL(`/api/ig/autorizar/${p.id}`, DASH_URL).href });
     }
     if ((m = u.pathname.match(/^\/api\/ig\/autorizar\/([a-f0-9]{32})$/))) {
       const p = lerPed(m[1]);
       if (!p) return html(res, 404, `<h1>Link inválido</h1><p>Peça um novo link para a equipe WAYTOP.</p>`);
       if (p.status === "aprovado") return html(res, 200, `<h1>Tudo certo ✅</h1><p>Você já autorizou. Obrigado!</p>`);
-      return html(res, 200, `<h1>A WAYTOP quer conhecer o seu perfil</h1><p>Para avaliar a parceria com <b>${escH(p.h)}</b>, precisamos ler alguns números do seu Instagram:</p><ul><li>seguidores e publicações</li><li>curtidas, comentários, alcance e salvamentos dos posts recentes</li><li>alcance dos stories ativos</li><li>público por país, cidade, idade e gênero</li></ul><a class="b" href="/api/ig/login?p=${p.id}">Autorizar com o Instagram</a><p class="e">Você entra na própria página da Meta. Não vemos sua senha, não publicamos nada e o acesso é usado uma vez só. A conta precisa ser profissional (Criador ou Comercial).</p>`);
+      return html(res, 200, `<h1>A WAYTOP quer conhecer o seu perfil</h1><p>Para avaliar a parceria com <b>${escH(p.h)}</b>, precisamos ler alguns números do seu Instagram:</p><ul><li>seguidores e publicações</li><li>curtidas, comentários, alcance e salvamentos dos posts recentes</li><li>alcance dos seus stories durante 7 dias</li><li>público por país, cidade, idade e gênero</li></ul><a class="b" href="/api/ig/login?p=${p.id}">Autorizar com o Instagram</a><p class="e">Você entra na própria página da Meta. Não vemos sua senha e não publicamos nada. O acesso fica guardado só para medir os stories por 7 dias e depois é apagado. Você pode remover a qualquer momento no Instagram (Configurações › Apps e sites). A conta precisa ser profissional (Criador ou Comercial).</p>`);
     }
     if (u.pathname === "/api/ig/obrigado") return html(res, 200, u.searchParams.get("e")
       ? `<h1>Não deu certo</h1><p>${escH(u.searchParams.get("e"))}</p><p>Tente de novo pelo mesmo link ou fale com a equipe WAYTOP.</p>`
@@ -204,10 +240,18 @@ http.createServer(async (req, res) => {
       const dados = await medir(tok.access_token);
       if (st.p) {
         const p = lerPed(st.p);
-        if (p) { Object.assign(p, { status: "aprovado", aprovado: new Date().toISOString(), conta: dados.h, dados }); salvarPed(p); }
+        if (p) {
+          const { _ig, _stories, ...limpos } = dados;
+          const agora = new Date();
+          Object.assign(p, { status: "aprovado", aprovado: agora.toISOString(), conta: dados.h, dados: limpos, token: tok.access_token, ig: _ig,
+            st: Object.fromEntries(_stories.map(x => [x.id, { ts: x.ts, reach: x.reach }])),
+            coleta: { inicio: agora.toISOString(), fim: new Date(agora.getTime() + DIAS_COLETA * DIA).toISOString(), ultima: agora.toISOString() } });
+          resumoStories(p); salvarPed(p);
+        }
         res.writeHead(302, { Location: "/api/ig/obrigado" }); return res.end();
       }
-      return back(res, "ig=" + b64url(JSON.stringify(dados)));
+      const { _ig, _stories, ...semIds } = dados;
+      return back(res, "ig=" + b64url(JSON.stringify(semIds)));
     }
     res.writeHead(404); res.end();
   } catch (e) {
@@ -217,4 +261,6 @@ http.createServer(async (req, res) => {
   }
 }).listen(PORT, "127.0.0.1", () => console.log("conector IG na porta " + PORT));
 
+setTimeout(coletar, 60e3).unref();
+setInterval(coletar, 6 * 36e5).unref();
 setInterval(() => { const n = Date.now(); for (const [k, v] of states) if (v.exp < n) states.delete(k); }, 60e3).unref();

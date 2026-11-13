@@ -271,6 +271,8 @@ tfoot td{border-top:2px solid var(--border);font-weight:800}
 .cid-it i{position:absolute;left:0;bottom:0;height:3px;border-radius:2px;background:var(--accent);opacity:.7}
 .cid-it em{font-style:normal;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
 .cid-n{width:20px;font-size:11px;color:var(--muted);font-weight:700;text-align:right}
+tr.clk{cursor:pointer}tr.clk:hover td{background:color-mix(in srgb,var(--accent) 6%,transparent)}tr.aberto td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.det-row>td{padding:0 0 12px!important;background:none!important}.det-row .ig-det{margin:0}
 .ig-det h3{font-size:13px;margin:14px 0 6px;color:var(--muted-2)}
 .note{font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:14px}
 .note b{color:var(--muted-2);font-weight:700}
@@ -531,7 +533,7 @@ section[hidden],.dp[hidden]{display:none!important}
             <div class="tbl-wrap"><table id="tbl-ped"></table></div>
           </div>
           <div class="card" id="av-card">
-            <div class="card-h"><div><h2>Dados e nota</h2><p>Clique em <b>Ver dados</b> num pedido aprovado. Escolha o nicho e complete o que faltar; a nota é calculada na hora.</p></div></div>
+            <div class="card-h"><div><h2>Dados e nota</h2><p>Clique num pedido aprovado (ou num candidato da lista) para abrir os dados; clique de novo para recolher. Ajuste o nicho aqui e a nota é recalculada.</p></div></div>
             <div id="ig-det"></div>
             <form id="av-form" class="av-form" autocomplete="off">
               <label>Perfil (@ ou link)<input name="h" placeholder="@usuario" required></label>
@@ -546,9 +548,9 @@ section[hidden],.dp[hidden]{display:none!important}
             </form>
           </div>
           <div class="card">
-            <div class="card-h"><div><h2>Candidatos em análise</h2><p>Nota de 0 a 100 com peso maior para engajamento e público no Brasil</p></div></div>
+            <div class="card-h"><div><h2>Candidatos em análise</h2><p>Nota de 0 a 100 comparada com perfis do mesmo porte · clique num candidato do Instagram para ver os dados</p></div></div>
             <div class="tbl-wrap"><table id="tbl-aval"></table></div>
-            <p class="note"><b>Nota</b> = engajamento (40%) + alcance médio dos stories sobre seguidores (25%) + público no Brasil (20%) + público de 18 a 34 anos (15%). Os pesos são uma proposta para validar.</p>
+            <p class="note"><b>Nota</b> (0 a 100), comparando com perfis do mesmo porte: engajamento (30), alcance por post (15) e alcance dos stories (15) sobre os seguidores, público no Brasil (15), público de 18 a 34 (10), constância de posts (10) e comentários por curtida (5, sinal de engajamento real). Referência de engajamento: até 10 mil seguidores ~4,5%, 10–100 mil ~2,3%, 100 mil–1 mi ~1,5%, acima de 1 mi ~1%. <b>Dado que ainda não existe sai do cálculo</b> e não conta como zero. Stories: média dos 7 dias seguintes à autorização (até lá, média dos dias já coletados). Parecer: 70+ contratar, 50–69 conversar, abaixo de 50 não indicado; com menos de 55 pontos de base, "faltam dados".</p>
           </div>
         </div>
       </section>
@@ -985,42 +987,70 @@ function chart(){
 }
 
 /* Avaliação (não depende do período) */
-const nota = c => Math.round(Math.min(c.eng/6,1)*40 + Math.min(c.alc/12,1)*25 + (c.br/100)*20 + (c.idade/100)*15);
-const corNota = n => n>=75?'var(--ok)':n>=55?'var(--warn)':'var(--bad)';
+/* Nota por práticas de mercado: engajamento e alcance comparados com perfis do mesmo porte.
+   Dado que ainda não existe (ex.: stories sem histórico) sai do cálculo: não conta como zero. */
+const PORTE = seg => seg<1e4?{n:"nano (até 10 mil)",er:4.5,rp:30,rs:10}:seg<1e5?{n:"micro (10 a 100 mil)",er:2.3,rp:20,rs:7}:seg<1e6?{n:"médio (100 mil a 1 mi)",er:1.5,rp:12,rs:4.5}:{n:"mega (1 mi+)",er:1,rp:8,rs:2.5};
+const numOk = v => typeof v==="number" && isFinite(v) ? v : null;
+const lin = (v,a,b) => Math.max(0, Math.min(1, (v-a)/(b-a)));
+function aval(c){
+  const pt = PORTE(c.seg||0), parts = [];
+  const add = (l,w,v,f,txt) => { v=numOk(v); parts.push({l, w, s: v==null?null:f(v), txt: v==null?"sem dado ainda":txt(v)}); };
+  add("Engajamento", 30, c.eng, v=>lin(v/pt.er,.25,1.15), v=>`${pct1(v)} · ref. ${pct1(pt.er)}`);
+  add("Alcance por post", 15, c.alp, v=>lin(v/pt.rp,.25,1.1), v=>`${pct1(v)} dos seguidores · ref. ${pt.rp}%`);
+  add("Stories", 15, c.alc, v=>lin(v/pt.rs,.25,1.1), v=>`${pct1(v)} dos seguidores · ref. ${pct1(pt.rs)}`);
+  add("Público no Brasil", 15, c.br, v=>lin(v,60,95), v=>pct1(v));
+  add("Público 18–34", 10, c.idade, v=>lin(v,20,60), v=>pct1(v));
+  add("Constância", 10, c.freq, v=>lin(v,.5,3), v=>`${String(v).replace(".",",")} posts/semana`);
+  add("Comentários por curtida", 5, c.cr, v=>lin(v,.3,2), v=>pct1(v));
+  const tem = parts.filter(x=>x.s!=null), w = tem.reduce((a,x)=>a+x.w,0);
+  return { n: w ? Math.round(tem.reduce((a,x)=>a+x.s*x.w,0)/w*100) : 0, cob: w, parts, porte: pt.n };
+}
+const nota = c => aval(c).n;
+const corNota = n => n>=70?'var(--ok)':n>=50?'var(--warn)':'var(--bad)';
 const AV_KEY = "wt-avaliados";
 function avLoad(){ try{ return JSON.parse(localStorage.getItem(AV_KEY)||"[]"); }catch(e){ return []; } }
 function avSave(l){ try{ localStorage.setItem(AV_KEY, JSON.stringify(l)); }catch(e){} }
-const parecer = n => n>=75?'<span class="tag ok">contratar</span>':n>=55?'<span class="tag warn">conversar</span>':'<span class="tag bad">não indicado</span>';
+const parecer = c => { const a=aval(c); return a.cob<55?'<span class="tag">faltam dados</span>':a.n>=70?'<span class="tag ok">contratar</span>':a.n>=50?'<span class="tag warn">conversar</span>':'<span class="tag bad">não indicado</span>'; };
 const scoreHTML = n => `<span class="score" style="color:${corNota(n)};background:color-mix(in srgb,${corNota(n)} 14%,transparent)">${n}</span>`;
-const pct1 = v => (Math.round(v*10)/10).toLocaleString("pt-BR")+"%";
+const pct1 = v => numOk(v)==null ? "–" : (Math.round(v*10)/10).toLocaleString("pt-BR")+"%";
+function stTxt(c){
+  if(numOk(c.alc)==null) return c.st&&c.st.coletando?'<small style="color:var(--muted)">coletando</small>':"–";
+  return pct1(c.alc)+(c.st&&c.st.coletando?`<small style="display:block;color:var(--muted)">média de ${c.st.dias} dia${c.st.dias>1?"s":""}</small>`:"");
+}
 function renderAval(){
+  if(document.querySelector("#tbl-aval .det-row")) return;
   const meus = avLoad().map((c,k)=>({...c, k}));
   const todos = [...meus, ...CAND];
   table("tbl-aval",[{t:"Candidato"},{t:"Nicho"},{t:"Seguidores",num:1},{t:"Engajamento",num:1},{t:"Alcance stories",num:1},{t:"Público BR",num:1},{t:"18–34 anos",num:1},{t:"Nota",num:1},{t:"Parecer"},{t:""}],
-    todos.sort((x,y)=>nota(y)-nota(x)).map(c=>{const n=nota(c);return `<tr><td class="who"><b>${esc(c.nome||c.h)}</b><small>${esc(c.h)}${c.k!==undefined?` · ${c.ig?"Instagram autorizado":"avaliado"} em ${c.dt}`:' · exemplo'}${c.falta&&c.falta.length?` · <span style="color:var(--warn)">sem ${esc(c.falta.join(", "))}</span>`:""}</small></td><td>${esc(c.cat||"–")}</td>
-      <td class="num">${N(c.seg)}</td><td class="num">${pct1(c.eng)}</td><td class="num">${pct1(c.alc)}</td><td class="num">${pct1(c.br)}</td><td class="num">${pct1(c.idade)}</td>
-      <td class="num">${scoreHTML(n)}</td><td>${parecer(n)}</td><td>${c.k!==undefined?`<button type="button" class="x-del" data-del="${c.k}" aria-label="Remover ${esc(c.h)}">×</button>`:''}</td></tr>`;}));
+    todos.sort((x,y)=>nota(y)-nota(x)).map(c=>{const n=nota(c);return `<tr${c.pid?` class="clk" data-pid="${esc(c.pid)}" title="Clique para ver ou recolher os dados"`:""}><td class="who"><b>${esc(c.nome||c.h)}</b><small>${esc(c.h)}${c.k!==undefined?` · ${c.ig?"Instagram autorizado":"avaliado"} em ${c.dt}`:' · exemplo'}${c.falta&&c.falta.length?` · <span style="color:var(--warn)">sem ${esc(c.falta.join(", "))}</span>`:""}</small></td><td>${esc(c.cat||"–")}</td>
+      <td class="num">${N(c.seg)}</td><td class="num">${pct1(c.eng)}</td><td class="num">${stTxt(c)}</td><td class="num">${pct1(c.br)}</td><td class="num">${pct1(c.idade)}</td>
+      <td class="num">${scoreHTML(n)}</td><td>${parecer(c)}</td><td>${c.k!==undefined?`<button type="button" class="x-del" data-del="${c.k}" aria-label="Remover ${esc(c.h)}">×</button>`:''}</td></tr>`;}));
 }
 const esc = t => String(t??"").replace(/[&<>"]/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
-const numIn = v => { const t=String(v||"").trim().replace(/\s/g,""); if(!t) return NaN; return Number(t.replace(/\./g,"").replace(",", ".")); };
+const numIn = v => { const t=String(v||"").trim().replace(/\s/g,""); if(!t) return NaN;
+  if(t.includes(",")) return Number(t.replace(/\./g,"").replace(",", "."));   // 1.234,5
+  if(/^\d{1,3}(\.\d{3})+$/.test(t)) return Number(t.replace(/\./g,""));    // 48.200
+  return Number(t); };                                                         // 98.3 ou 48200
+let IGX = null; // números extras que vieram do Instagram (alcance por post, constância, comentários/curtidas)
 function avRead(){
-  const f = $("av-form"), g = k => f.elements[k].value;
+  const f = $("av-form"), g = k => f.elements[k].value, nz = v => isNaN(v)?null:v;
   let h = g("h").trim().replace(/^(https?:\/\/)?(www\.)?instagram\.com\//i,"").replace(/\/.*$/,""); if(h && !h.startsWith("@")) h="@"+h;
-  const seg=numIn(g("seg")), inter=numIn(g("inter")), alcN=numIn(g("alcN")), br=numIn(g("br")), idade=numIn(g("idade"));
-  const ok = h.length>1 && seg>0 && inter>=0 && alcN>=0 && br>=0 && br<=100 && idade>=0 && idade<=100;
-  return {ok, c:{h, nome:g("nome").trim(), cat:g("cat").trim(), seg, eng: seg?inter/seg*100:0, alc: seg?alcN/seg*100:0, br, idade}};
+  const seg=numIn(g("seg")), inter=numIn(g("inter")), alcN=nz(numIn(g("alcN"))), br=nz(numIn(g("br"))), idade=nz(numIn(g("idade")));
+  const ok = h.length>1 && seg>0 && inter>=0 && (br==null||br<=100) && (idade==null||idade<=100);
+  const x = IGX && IGX.h.toLowerCase()===h.toLowerCase() ? IGX : {};
+  return {ok, c:{h, nome:g("nome").trim(), cat:g("cat").trim(), seg, eng: seg?inter/seg*100:0, alc: seg&&alcN!=null?alcN/seg*100:null, br, idade, alp:x.alp??null, freq:x.freq??null, cr:x.cr??null, pid:x.pid, st:x.st}};
 }
 function avPaint(){
   const {ok,c} = avRead();
-  if(!ok){ $("av-res").innerHTML = 'Preencha o @, os seguidores, as interações, o alcance e os dois percentuais de público para ver a nota.<span class="act"><button type="submit" form="av-form" class="btn pri" disabled>Adicionar à lista</button></span>'; return; }
-  const p = {e:Math.min(c.eng/6,1)*40, a:Math.min(c.alc/12,1)*25, b:c.br/100*20, i:c.idade/100*15}, n = nota(c);
-  $("av-res").innerHTML = `${scoreHTML(n)}${parecer(n)}<span class="parts"><span>Engajamento <b>${pct1(c.eng)}</b> · ${p.e.toFixed(0)}/40</span><span>Stories <b>${pct1(c.alc)}</b> · ${p.a.toFixed(0)}/25</span><span>Brasil · ${p.b.toFixed(0)}/20</span><span>18–34 · ${p.i.toFixed(0)}/15</span></span>
+  if(!ok){ $("av-res").innerHTML = 'Preencha o @, os seguidores e as curtidas + comentários para ver a nota. O resto melhora a avaliação, mas não é obrigatório.<span class="act"><button type="submit" form="av-form" class="btn pri" disabled>Adicionar à lista</button></span>'; return; }
+  const a = aval(c);
+  $("av-res").innerHTML = `${scoreHTML(a.n)}${parecer(c)}<span class="parts"><span>Porte <b>${a.porte}</b></span>${a.parts.map(x=>`<span>${x.l} <b>${esc(x.txt)}</b>${x.s==null?"":` · ${Math.round(x.s*x.w)}/${x.w}`}</span>`).join("")}<span>Base da nota <b>${a.cob} de 100 pontos</b></span></span>
     <span class="act"><button type="reset" form="av-form" class="btn">Limpar</button><button type="submit" form="av-form" class="btn pri">Adicionar à lista</button></span>`;
 }
 $("av-form").addEventListener("input", avPaint);
-$("av-form").addEventListener("reset", ()=>setTimeout(avPaint));
+$("av-form").addEventListener("reset", ()=>{ IGX=null; setTimeout(avPaint); });
 $("av-form").addEventListener("submit", e=>{ e.preventDefault(); const {ok,c}=avRead(); if(!ok) return;
-  const l = avLoad().filter(x=>x.h.toLowerCase()!==c.h.toLowerCase()); l.unshift({...c, dt:dd(TODAY)}); avSave(l); $("av-form").reset(); renderAval(); });
+  const l = avLoad().filter(x=>x.h.toLowerCase()!==c.h.toLowerCase()); const old=avLoad().find(x=>x.h.toLowerCase()===c.h.toLowerCase()); l.unshift({...old, ...c, dt:dd(TODAY)}); avSave(l); $("av-form").reset(); renderAval(); });
 $("tbl-aval").addEventListener("click", e=>{ const b=e.target.closest("button[data-del]"); if(!b) return; const l=avLoad(); l.splice(+b.dataset.del,1); avSave(l); renderAval(); });
 renderAval(); avPaint();
 /* Conector Instagram: só funciona na versão hospedada (waytop.7bee.ai), onde o servidor /api/ig existe.
@@ -1038,9 +1068,9 @@ function renderPed(){
   if(!l.length){ t.innerHTML=`<tbody><tr><td style="color:var(--muted)">${IG_ON?"Nenhum pedido ainda. Digite o @ acima.":"Os pedidos funcionam na versão publicada (waytop.7bee.ai)."}</td></tr></tbody>`; return; }
   t.innerHTML=`<thead><tr><th>Perfil</th><th>Pedido em</th><th>Status</th><th></th></tr></thead><tbody>${l.map((p,i)=>{
     const msg=encodeURIComponent(`Oi! Aqui é da WAYTOP. Para avaliarmos a parceria, autorize a leitura dos números do seu Instagram por este link: ${p.link}`);
-    const acts=p.status==="aprovado"?`<button class="btn sm pri" data-ver="${i}">Ver dados</button>`
+    const acts=p.status==="aprovado"?`<button class="btn sm pri" data-ver="${i}">Ver dados ▾</button>`
       :`<button class="btn sm" data-copy="${i}">Copiar link</button><a class="btn sm" style="text-decoration:none;color:inherit" target="_blank" rel="noopener" href="https://wa.me/?text=${msg}">WhatsApp</a>`;
-    return `<tr><td><b>${esc(p.h)}</b>${p.conta&&p.conta.toLowerCase()!==p.h.toLowerCase()?`<br><small style="color:var(--muted)">autorizou com ${esc(p.conta)}</small>`:""}</td><td>${new Date(p.criado).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td><td>${ST[p.status]||esc(p.status)}</td><td><span class="acts">${acts}<button class="btn sm" data-delp="${i}" title="Excluir pedido">×</button></span></td></tr>`;
+    return `<tr${p.status==="aprovado"?' class="clk" title="Clique para ver ou recolher os dados"':""}><td><b>${esc(p.h)}</b>${p.conta&&p.conta.toLowerCase()!==p.h.toLowerCase()?`<br><small style="color:var(--muted)">autorizou com ${esc(p.conta)}</small>`:""}</td><td>${new Date(p.criado).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td><td>${ST[p.status]||esc(p.status)}</td><td><span class="acts">${acts}<button class="btn sm" data-delp="${i}" title="Excluir pedido">×</button></span></td></tr>`;
   }).join("")}</tbody>`;
 }
 /* Aprovado entra sozinho em "Candidatos em análise" (sem nicho; o que não veio do Instagram conta como 0 até ser preenchido) */
@@ -1051,24 +1081,35 @@ function nichoDe(d){
   let best="", n=0; for(const [nome,re] of NICHOS){ const k=(t.match(new RegExp(re.source,"g"))||[]).length; if(k>n){ n=k; best=nome; } }
   return best;
 }
-function pedParaLista(d){
-  const n=v=>typeof v==="number"?v:NaN, seg=n(d.seg), inter=n(d.inter);
+function extrasDe(d, pid){
+  const n=v=>numOk(v), seg=n(d.seg);
+  return { h:d.h, pid, st:d.stories||null,
+    alp: seg&&n(d.alcance_post)!=null ? d.alcance_post/seg*100 : null,
+    freq: n(d.por_semana), cr: n(d.curtidas)&&n(d.comentarios)!=null ? d.comentarios/d.curtidas*100 : null };
+}
+function pedParaLista(d, pid){
+  const n=v=>numOk(v), seg=n(d.seg), inter=n(d.inter);
   if(!(seg>0)) return;
-  const falta=[isNaN(n(d.alcN))&&"stories", isNaN(n(d.br))&&"Brasil", isNaN(n(d.idade))&&"18–34"].filter(Boolean);
+  const falta=[n(d.br)==null&&"Brasil", n(d.idade)==null&&"18–34"].filter(Boolean);
   const l=avLoad(), old=l.find(x=>x.h.toLowerCase()===d.h.toLowerCase());
-  const c={h:d.h, nome:d.nome||"", cat:old?.cat||nichoDe(d), seg, eng:inter>=0?inter/seg*100:0, alc:n(d.alcN)>=0?n(d.alcN)/seg*100:0, br:n(d.br)>=0?n(d.br):0, idade:n(d.idade)>=0?n(d.idade):0, dt:dd(TODAY), ig:1, falta};
-  avSave([c, ...l.filter(x=>x!==old)]); renderAval();
+  const x=extrasDe(d, pid);
+  const c={h:d.h, nome:d.nome||"", cat:old?.cat||nichoDe(d), seg, eng:inter!=null?inter/seg*100:0, alc:n(d.alcN)!=null?d.alcN/seg*100:null, br:n(d.br), idade:n(d.idade),
+    alp:x.alp, freq:x.freq, cr:x.cr, st:x.st, pid, dt:old?.dt||dd(TODAY), ig:1, falta};
+  avSave([c, ...l.filter(y=>y!==old)]); renderAval();
 }
 async function pedAtualizar(){
   const l=pedLoad(); let mudou=false;
+  for(const p of l) if(p.status==="aprovado" && p.nalista && (!p.fim || Date.now()<p.fim) && Date.now()-(p.sync||0)>6e5){
+    try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(d.dados){ pedParaLista(d.dados, p.id); p.sync=Date.now(); p.fim=d.dados.stories&&!d.dados.stories.coletando?1:new Date(d.dados.stories?.ate||0).getTime()+864e5; mudou=true; } }catch(e){}
+  }
   for(const p of l) if(p.status==="aprovado" && !p.nalista){
-    try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(d.dados){ pedParaLista(d.dados); p.nalista=1; mudou=true; } }catch(e){}
+    try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(d.dados){ pedParaLista(d.dados, p.id); p.nalista=1; p.sync=Date.now(); mudou=true; } }catch(e){}
   }
   for(const p of l) if(p.status==="aguardando"){
     try{ const r=await fetch("/api/ig/pedido/"+p.id); if(r.status===404){ p.status="recusado"; mudou=true; continue; }
       const d=await r.json(); if(d.status!==p.status){ Object.assign(p,{status:d.status,conta:d.conta||""}); mudou=true; } }catch(e){}
   }
-  if(mudou){ pedSave(l); renderPed(); if(l.some(p=>p.status==="aprovado"&&!p.nalista)) pedAtualizar(); }
+  if(mudou){ pedSave(l); if(!document.querySelector(".det-row")) renderPed(); if(l.some(p=>p.status==="aprovado"&&!p.nalista)) pedAtualizar(); }
 }
 /* Cidades: menu suspenso no padrão do seletor de unidades do dashboard CDT */
 function cidadesHTML(l){
@@ -1086,23 +1127,43 @@ document.addEventListener("click", e=>{
   if(b){ const m=b.nextElementSibling; m.hidden=!m.hidden; b.setAttribute("aria-expanded", String(!m.hidden)); }
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") document.querySelectorAll(".cid-menu:not([hidden])").forEach(m=>m.hidden=true); });
-function renderDet(p, d){
+function stCard(d){
+  const st=d.stories;
+  if(!st) return fmtN(d.alcN);
+  const ate=new Date(st.ate).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
+  if(!st.n) return `<small style="font-weight:600;color:var(--muted)">${st.coletando?`sem story ainda · coletando até ${ate}`:"nenhum story em 7 dias"}</small>`;
+  return `${fmtN(d.alcN)}<small style="display:block;font-weight:600;color:var(--muted)">média de ${st.n} stories em ${st.dias} dia${st.dias>1?"s":""}${st.coletando?` · coletando até ${ate}`:""}</small>`;
+}
+function detHTML(d){
   const c=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
   const pct=v=>v===""||v==null?"–":String(v).replace(".",",")+"%";
-  $("ig-det").innerHTML=`<div class="ig-det"><div class="ig-top">${d.foto?`<img src="${esc(d.foto)}" alt="">`:""}<div><b>${esc(d.h)}</b> ${esc(d.nome)}<p>${esc(d.bio)}${d.site?`\n${esc(d.site)}`:""}</p></div></div>
+  return `<div class="ig-det"><div class="ig-top">${d.foto?`<img src="${esc(d.foto)}" alt="">`:""}<div><b>${esc(d.h)}</b> ${esc(d.nome)}<p>${esc(d.bio)}${d.site?`\n${esc(d.site)}`:""}</p></div></div>
     <div class="ig-stats">${c("Seguidores",fmtN(d.seg))}${c("Seguindo",fmtN(d.seguindo))}${c("Publicações",fmtN(d.posts_total))}${c("Curtidas por post",fmtN(d.curtidas))}${c("Comentários por post",fmtN(d.comentarios))}${c("Engajamento",pct(d.eng))}
-    ${c("Alcance por post",fmtN(d.alcance_post))}${c("Salvos por post",fmtN(d.salvos))}${c("Posts por semana",fmtN(d.por_semana))}${c("Reels nos últimos posts",pct(d.reels))}${c("Alcance dos stories",fmtN(d.alcN))}${c("Público no Brasil",pct(d.br))}
+    ${c("Alcance por post",fmtN(d.alcance_post))}${c("Salvos por post",fmtN(d.salvos))}${c("Posts por semana",fmtN(d.por_semana))}${c("Reels nos últimos posts",pct(d.reels))}${c("Alcance dos stories",stCard(d))}${c("Público no Brasil",pct(d.br))}
     ${c("Público 18 a 34",pct(d.idade))}${c("Gênero",fmtN(d.genero))}${cidadesHTML(d.cidades)}</div>
     ${d.ultimos&&d.ultimos.length?`<h3>Últimos posts</h3><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th class="num">Curtidas</th><th class="num">Comentários</th><th class="num">Alcance</th><th class="num">Salvos</th><th></th></tr></thead><tbody>${d.ultimos.map(m=>`<tr><td>${esc(m.data.split("-").reverse().join("/"))}</td><td>${esc(m.tipo)}</td><td class="num">${fmtN(m.curtidas)}</td><td class="num">${fmtN(m.comentarios)}</td><td class="num">${fmtN(m.alcance)}</td><td class="num">${fmtN(m.salvos)}</td><td>${m.link?`<a href="${esc(m.link)}" target="_blank" rel="noopener">abrir</a>`:""}</td></tr>`).join("")}</tbody></table></div>`:""}</div>`;
+}
+function preencher(d, pid){
   const f=$("av-form");
+  IGX=extrasDe(d, pid);
   for(const k of ["h","nome","seg","inter","alcN","br","idade"]) f.elements[k].value = d[k]!=null&&d[k]!==""?d[k]:"";
+  const old=avLoad().find(x=>x.h.toLowerCase()===d.h.toLowerCase());
+  f.elements.cat.value = old?.cat || nichoDe(d);
   avPaint();
-  const sug=nichoDe(d); f.elements.cat.value=sug;
-  const falta=[...(d.faltam||[]), ...(sug?[]:["nicho"])];
-  if(falta.length) igMsg("warn","preencher à mão: "+falta.join(", ")); else igMsg("","");
-  if(sug) igMsg("", "nicho sugerido pela bio: "+sug+(falta.length?" · preencher à mão: "+falta.join(", "):""));
-  f.elements.cat.focus();
-  $("ig-det").scrollIntoView({behavior:"smooth",block:"start"});
+}
+/* Dados em um clique: abre uma linha embaixo; clicar de novo no mesmo lugar recolhe */
+async function alternarDet(tr, pid, cols){
+  const aberto = tr.nextElementSibling && tr.nextElementSibling.classList.contains("det-row");
+  document.querySelectorAll(".det-row").forEach(x=>x.remove());
+  document.querySelectorAll("tr.aberto").forEach(x=>x.classList.remove("aberto"));
+  if(aberto) return;
+  tr.classList.add("aberto");
+  tr.insertAdjacentHTML("afterend", `<tr class="det-row"><td colspan="${cols}"><div class="ig-det" style="text-align:center;color:var(--muted)">carregando…</div></td></tr>`);
+  const cel=tr.nextElementSibling.firstElementChild;
+  try{ const r=await fetch("/api/ig/pedido/"+pid), d=await r.json(); if(!r.ok||!d.dados) throw new Error(d.erro||"sem dados");
+    cel.innerHTML=detHTML(d.dados); preencher(d.dados, pid);
+    if(!tr.closest("#tbl-aval")) pedParaLista(d.dados, pid);
+  }catch(err){ cel.innerHTML=`<div class="ig-det"><span class="tag bad">${esc(err.message)}</span></div>`; }
 }
 if(IG_ON){
   $("ped-btn").disabled=false;
@@ -1115,13 +1176,14 @@ if(IG_ON){
     }catch(err){ $("ped-msg").innerHTML=`<span class="tag bad">${esc(err.message)}</span>`; }
     b.disabled=false; });
   document.addEventListener("click", async e=>{
-    const t=e.target.closest("[data-copy],[data-ver],[data-delp]"); if(!t) return;
+    let t=e.target.closest("[data-copy],[data-ver],[data-delp]");
+    if(!t){ const tr=e.target.closest("tr.clk"); if(!tr||e.target.closest("a,button,.cid-wrap,.det-row")) return;
+      if(tr.dataset.pid){ alternarDet(tr, tr.dataset.pid, tr.children.length); return; }
+      const b=tr.querySelector("[data-ver]"); if(b) t=b; else return; }
     const l=pedLoad();
     if(t.dataset.copy!=null){ const p=l[+t.dataset.copy]; try{ await navigator.clipboard.writeText(p.link); t.textContent="Copiado ✓"; }catch(err){ prompt("Copie o link:", p.link); } return; }
     if(t.dataset.delp!=null){ const p=l[+t.dataset.delp]; if(!confirm(`Excluir o pedido de ${p.h}? Os dados dele saem do servidor.`)) return; fetch("/api/ig/pedido/"+p.id,{method:"DELETE"}).catch(()=>{}); l.splice(+t.dataset.delp,1); pedSave(l); renderPed(); return; }
-    if(t.dataset.ver!=null){ const p=l[+t.dataset.ver]; t.disabled=true;
-      try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(!r.ok||!d.dados) throw new Error(d.erro||"sem dados"); renderDet(p,d.dados); pedParaLista(d.dados); }catch(err){ igMsg("bad",err.message); }
-      t.disabled=false; }
+    if(t.dataset.ver!=null){ const p=l[+t.dataset.ver]; alternarDet(t.closest("tr"), p.id, 4); }
   });
   pedAtualizar(); setInterval(pedAtualizar, 15000);
 }

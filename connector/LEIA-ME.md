@@ -7,6 +7,8 @@
 3. O candidato abre o link, clica em **Autorizar com o Instagram** e entra na Meta. Os números são lidos uma vez, gravados no pedido e o token é descartado.
 4. O status muda para **aprovado** e o botão **Ver dados** mostra perfil, bio, seguidores, seguindo, publicações, curtidas, comentários, alcance e salvos por post, engajamento, posts por semana, % de Reels, alcance dos stories, público (Brasil, 18–34, gênero, cidades) e os últimos posts. O nicho é escolhido à mão.
 
+**Stories por 7 dias:** ao aprovar, o acesso do candidato fica guardado só no servidor (arquivo do pedido, 0600) e o conector lê os stories no ar a cada 6 horas, guardando o maior alcance de cada story. O alcance mostrado é a média por story dos dias já coletados ("média de N stories em X dias"); depois de 7 dias a coleta para e o acesso é apagado. O acesso nunca é enviado para a página.
+
 A lista de pedidos fica guardada no navegador de quem criou (os ids); os dados ficam no servidor. Enquanto o app estiver em modo de desenvolvimento, só contas testadoras conseguem autorizar. Para qualquer candidato, o app precisa da Análise do app da Meta.
 
 A busca pelo @ (Business Discovery, `/api/ig/perfil`) e o login direto (`/api/ig/login`) continuam no servidor, sem botão na página.
