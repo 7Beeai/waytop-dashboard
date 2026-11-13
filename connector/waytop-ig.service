@@ -10,6 +10,8 @@ ExecStart=/usr/bin/node /opt/waytop-ig/server.js
 Restart=always
 User=www-data
 NoNewPrivileges=true
+StateDirectory=waytop-ig
+StateDirectoryMode=0700
 
 [Install]
 WantedBy=multi-user.target

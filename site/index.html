@@ -502,10 +502,10 @@ section[hidden],.dp[hidden]{display:none!important}
       <!-- ================= AVALIAÇÃO ================= -->
       <section id="v-avaliacao" data-view="avaliacao" hidden>
         <div class="wrap" style="padding:0">
-          <div class="head"><div><div class="eyebrow">Pré-contratação</div><h1>Avaliação de perfil</h1><p class="sub">Dados do Instagram do candidato antes de fechar contrato. Quando o conector da Meta estiver ligado, os campos são preenchidos sozinhos.</p></div><span class="tag warn">conector Meta em configuração</span></div>
+          <div class="head"><div><div class="eyebrow">Pré-contratação</div><h1>Avaliação de perfil</h1><p class="sub">Dados do Instagram do candidato antes de fechar contrato. Digite o @ e clique em Buscar: seguidores e engajamento vêm do Instagram; alcance dos stories e público ficam à mão, porque não são públicos.</p></div><span class="tag" id="ig-conta">busca pelo @ só na versão publicada</span></div>
           <div class="card" id="av-card">
-            <div class="card-h"><div><h2>Avaliar novo perfil</h2><p>Digite os números dos Insights do candidato (últimos 30 dias). A nota é calculada na hora.</p></div>
-              <button type="button" class="btn" id="ig-btn" disabled title="Disponível quando o app da Meta estiver configurado">Conectar Instagram · em breve</button></div>
+            <div class="card-h"><div><h2>Avaliar novo perfil</h2><p>Digite o @ e busque. Complete à mão o que o Instagram não mostra (peça um print dos Insights ao candidato). A nota é calculada na hora.</p></div>
+              <button type="button" class="btn" id="ig-btn" disabled title="Disponível na versão publicada (waytop.7bee.ai)">Buscar pelo @</button></div>
             <form id="av-form" class="av-form" autocomplete="off">
               <label>Perfil (@ ou link)<input name="h" placeholder="@usuario" required></label>
               <label>Nome<input name="nome" placeholder="Nome do candidato"></label>
@@ -999,12 +999,32 @@ renderAval(); avPaint();
 /* Conector Instagram: só funciona na versão hospedada (waytop.7bee.ai), onde o servidor /api/ig existe.
    O servidor devolve os números em ?ig=<base64url(JSON)> e a página preenche o formulário. */
 const IG_ON = /(^|\.)7bee\.ai$/.test(location.hostname);
-if(IG_ON){ const b=$("ig-btn"); b.disabled=false; b.textContent="Conectar Instagram do candidato"; b.title="";
-  b.addEventListener("click", ()=>{ location.href = "/api/ig/login"; }); }
+function igMsg(cls, txt){ const r=$("av-res"); r.querySelectorAll(".ig-msg").forEach(x=>x.remove()); if(txt) r.insertAdjacentHTML("afterbegin", `<span class="tag ${cls} ig-msg">${esc(txt)}</span>`); }
+async function igBuscar(){
+  const f=$("av-form"), h=f.elements.h.value.trim().replace(/^https?:\/\//,"").replace(/^(www\.)?instagram\.com\//,"").replace(/[/?#].*$/,"").replace(/^@/,"");
+  if(!h){ f.elements.h.focus(); igMsg("warn","digite o @ do candidato"); return; }
+  const b=$("ig-btn"); b.disabled=true; b.textContent="Buscando…"; igMsg("", "");
+  try{
+    const r=await fetch("/api/ig/perfil?u="+encodeURIComponent(h)), d=await r.json();
+    if(!r.ok) throw new Error(d.erro||"falha na busca");
+    for(const k of ["h","nome","seg","inter"]) if(d[k]!=null && d[k]!=="") f.elements[k].value=d[k];
+    avPaint();
+    igMsg("warn", "preencher à mão: "+d.faltam.join(", "));
+  }catch(e){ igMsg("bad", e.message); }
+  b.disabled=false; b.textContent="Buscar pelo @";
+}
+if(IG_ON){ const b=$("ig-btn"); b.disabled=false; b.title="";
+  b.addEventListener("click", igBuscar);
+  $("av-form").elements.h.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); igBuscar(); } });
+  fetch("/api/ig/status").then(r=>r.json()).then(s=>{ const t=$("ig-conta");
+    if(s.conectado){ t.className="tag ok"; t.textContent="busca ligada a "+s.conta; }
+    else { t.outerHTML=`<a class="btn" style="text-decoration:none;color:inherit" id="ig-conta" href="/api/ig/conectar" title="Uma vez só: entre com o Instagram profissional da WAYTOP">Conectar conta da WAYTOP</a>`; }
+  }).catch(()=>{ $("ig-conta").textContent="conector fora do ar"; }); }
 (function igFill(){
-  const q = new URLSearchParams(location.search), raw = q.get("ig"), err = q.get("ig_erro");
-  if(!raw && !err) return;
+  const q = new URLSearchParams(location.search), raw = q.get("ig"), err = q.get("ig_erro"), conta = q.get("ig_conta");
+  if(!raw && !err && !conta) return;
   history.replaceState(null, "", location.pathname + "#avaliacao");
+  if(conta){ $("av-res").insertAdjacentHTML("afterbegin", `<span class="tag ok">busca pelo @ ligada à conta ${esc(conta)}</span>`); return; }
   if(err){ $("av-res").insertAdjacentHTML("afterbegin", `<span class="tag bad">${esc(err)}</span>`); return; }
   try{
     const d = JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g,"+").replace(/_/g,"/")))));
