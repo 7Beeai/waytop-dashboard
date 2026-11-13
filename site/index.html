@@ -251,6 +251,16 @@ tfoot td{border-top:2px solid var(--border);font-weight:800}
 .journey i.lost{background:var(--bad)}
 
 .score{display:inline-grid;place-items:center;width:38px;height:24px;border-radius:8px;font-size:12.5px;font-weight:800}
+.ped-form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.ped-form input{flex:1 1 220px;height:38px;background:var(--card-2);border:1px solid var(--border-2);border-radius:10px;padding:0 12px;color:var(--fg);font:inherit;font-size:14px;font-weight:600}
+.ped-form input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}.btn:disabled{opacity:.45;cursor:default}.btn.sm{height:30px;padding:0 11px;font-size:12px}
+.ped-msg:empty{display:none}.ped-msg{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--muted-2)}.ped-msg code{background:var(--card-2);border:1px solid var(--border-2);border-radius:8px;padding:6px 10px;font-size:12px;word-break:break-all}
+#tbl-ped td .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.ig-det{border:1px solid var(--border-2);background:var(--card-2);border-radius:14px;padding:14px;margin-bottom:14px}
+.ig-top{display:flex;gap:12px;align-items:center;margin-bottom:12px}.ig-top img{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--secondary)}.ig-top b{font-size:16px}.ig-top p{margin:2px 0 0;font-size:12px;color:var(--muted-2);white-space:pre-line}
+.ig-stats{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}@media(min-width:720px){.ig-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(min-width:1080px){.ig-stats{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.ig-stats div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 11px;min-width:0}.ig-stats span{display:block;font-size:11px;color:var(--muted);font-weight:600}.ig-stats b{font-size:15px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ig-det h3{font-size:13px;margin:14px 0 6px;color:var(--muted-2)}
 .note{font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:14px}
 .note b{color:var(--muted-2);font-weight:700}
 
@@ -502,10 +512,16 @@ section[hidden],.dp[hidden]{display:none!important}
       <!-- ================= AVALIAÇÃO ================= -->
       <section id="v-avaliacao" data-view="avaliacao" hidden>
         <div class="wrap" style="padding:0">
-          <div class="head"><div><div class="eyebrow">Pré-contratação</div><h1>Avaliação de perfil</h1><p class="sub">Dados do Instagram do candidato antes de fechar contrato. Digite o @ e clique em Buscar: seguidores e engajamento vêm do Instagram; alcance dos stories e público ficam à mão, porque não são públicos.</p></div><span class="tag" id="ig-conta">busca pelo @ só na versão publicada</span></div>
+          <div class="head"><div><div class="eyebrow">Pré-contratação</div><h1>Avaliação de perfil</h1><p class="sub">Peça a autorização do candidato pelo @. Enquanto ele não aprova, o pedido fica aguardando; quando aprova, os dados do Instagram aparecem e a nota é calculada.</p></div></div>
+          <div class="card" id="ped-card">
+            <div class="card-h"><div><h2>Pedir autorização</h2><p>Digite o @ e gere o link. Mande ao candidato (WhatsApp, Direct). Ele entra com o Instagram dele e autoriza.</p></div></div>
+            <form id="ped-form" class="ped-form" autocomplete="off"><input name="h" placeholder="@usuario ou link do perfil" required><button class="btn pri" id="ped-btn" disabled>Pedir autorização</button></form>
+            <div id="ped-msg" class="ped-msg"></div>
+            <div class="tbl-wrap"><table id="tbl-ped"></table></div>
+          </div>
           <div class="card" id="av-card">
-            <div class="card-h"><div><h2>Avaliar novo perfil</h2><p>Digite o @ e busque. Complete à mão o que o Instagram não mostra (peça um print dos Insights ao candidato). A nota é calculada na hora.</p></div>
-              <button type="button" class="btn" id="ig-btn" disabled title="Disponível na versão publicada (waytop.7bee.ai)">Buscar pelo @</button></div>
+            <div class="card-h"><div><h2>Dados e nota</h2><p>Clique em <b>Ver dados</b> num pedido aprovado. Escolha o nicho e complete o que faltar; a nota é calculada na hora.</p></div></div>
+            <div id="ig-det"></div>
             <form id="av-form" class="av-form" autocomplete="off">
               <label>Perfil (@ ou link)<input name="h" placeholder="@usuario" required></label>
               <label>Nome<input name="nome" placeholder="Nome do candidato"></label>
@@ -1000,26 +1016,68 @@ renderAval(); avPaint();
    O servidor devolve os números em ?ig=<base64url(JSON)> e a página preenche o formulário. */
 const IG_ON = /(^|\.)7bee\.ai$/.test(location.hostname);
 function igMsg(cls, txt){ const r=$("av-res"); r.querySelectorAll(".ig-msg").forEach(x=>x.remove()); if(txt) r.insertAdjacentHTML("afterbegin", `<span class="tag ${cls} ig-msg">${esc(txt)}</span>`); }
-async function igBuscar(){
-  const f=$("av-form"), h=f.elements.h.value.trim().replace(/^https?:\/\//,"").replace(/^(www\.)?instagram\.com\//,"").replace(/[/?#].*$/,"").replace(/^@/,"");
-  if(!h){ f.elements.h.focus(); igMsg("warn","digite o @ do candidato"); return; }
-  const b=$("ig-btn"); b.disabled=true; b.textContent="Buscando…"; igMsg("", "");
-  try{
-    const r=await fetch("/api/ig/perfil?u="+encodeURIComponent(h)), d=await r.json();
-    if(!r.ok) throw new Error(d.erro||"falha na busca");
-    for(const k of ["h","nome","seg","inter"]) if(d[k]!=null && d[k]!=="") f.elements[k].value=d[k];
-    avPaint();
-    igMsg("warn", "preencher à mão: "+d.faltam.join(", "));
-  }catch(e){ igMsg("bad", e.message); }
-  b.disabled=false; b.textContent="Buscar pelo @";
+/* Pedidos de autorização: guardados no servidor; este navegador lembra os ids que criou */
+const PKEY="wt-pedidos";
+const pedLoad=()=>{ try{ return JSON.parse(localStorage.getItem(PKEY))||[]; }catch(e){ return []; } };
+const pedSave=l=>{ try{ localStorage.setItem(PKEY, JSON.stringify(l)); }catch(e){} };
+const ST={aguardando:'<span class="tag warn">aguardando aprovação</span>', aprovado:'<span class="tag ok">aprovado</span>', recusado:'<span class="tag bad">recusado</span>'};
+const fmtN=v=>v===""||v==null?"–":typeof v==="number"?N(v):esc(v);
+function renderPed(){
+  const l=pedLoad(), t=$("tbl-ped");
+  if(!l.length){ t.innerHTML=`<tbody><tr><td style="color:var(--muted)">${IG_ON?"Nenhum pedido ainda. Digite o @ acima.":"Os pedidos funcionam na versão publicada (waytop.7bee.ai)."}</td></tr></tbody>`; return; }
+  t.innerHTML=`<thead><tr><th>Perfil</th><th>Pedido em</th><th>Status</th><th></th></tr></thead><tbody>${l.map((p,i)=>{
+    const msg=encodeURIComponent(`Oi! Aqui é da WAYTOP. Para avaliarmos a parceria, autorize a leitura dos números do seu Instagram por este link: ${p.link}`);
+    const acts=p.status==="aprovado"?`<button class="btn sm pri" data-ver="${i}">Ver dados</button>`
+      :`<button class="btn sm" data-copy="${i}">Copiar link</button><a class="btn sm" style="text-decoration:none;color:inherit" target="_blank" rel="noopener" href="https://wa.me/?text=${msg}">WhatsApp</a>`;
+    return `<tr><td><b>${esc(p.h)}</b>${p.conta&&p.conta.toLowerCase()!==p.h.toLowerCase()?`<br><small style="color:var(--muted)">autorizou com ${esc(p.conta)}</small>`:""}</td><td>${new Date(p.criado).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td><td>${ST[p.status]||esc(p.status)}</td><td><span class="acts">${acts}<button class="btn sm" data-delp="${i}" title="Excluir pedido">×</button></span></td></tr>`;
+  }).join("")}</tbody>`;
 }
-if(IG_ON){ const b=$("ig-btn"); b.disabled=false; b.title="";
-  b.addEventListener("click", igBuscar);
-  $("av-form").elements.h.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); igBuscar(); } });
-  fetch("/api/ig/status").then(r=>r.json()).then(s=>{ const t=$("ig-conta");
-    if(s.conectado){ t.className="tag ok"; t.textContent="busca ligada a "+s.conta; }
-    else { t.outerHTML=`<a class="btn" style="text-decoration:none;color:inherit" id="ig-conta" href="/api/ig/conectar" title="Uma vez só: entre com o Instagram profissional da WAYTOP">Conectar conta da WAYTOP</a>`; }
-  }).catch(()=>{ $("ig-conta").textContent="conector fora do ar"; }); }
+async function pedAtualizar(){
+  const l=pedLoad(); let mudou=false;
+  for(const p of l) if(p.status==="aguardando"){
+    try{ const r=await fetch("/api/ig/pedido/"+p.id); if(r.status===404){ p.status="recusado"; mudou=true; continue; }
+      const d=await r.json(); if(d.status!==p.status){ Object.assign(p,{status:d.status,conta:d.conta||""}); mudou=true; } }catch(e){}
+  }
+  if(mudou){ pedSave(l); renderPed(); }
+}
+function renderDet(p, d){
+  const c=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
+  const pct=v=>v===""||v==null?"–":String(v).replace(".",",")+"%";
+  $("ig-det").innerHTML=`<div class="ig-det"><div class="ig-top">${d.foto?`<img src="${esc(d.foto)}" alt="">`:""}<div><b>${esc(d.h)}</b> ${esc(d.nome)}<p>${esc(d.bio)}${d.site?`\n${esc(d.site)}`:""}</p></div></div>
+    <div class="ig-stats">${c("Seguidores",fmtN(d.seg))}${c("Seguindo",fmtN(d.seguindo))}${c("Publicações",fmtN(d.posts_total))}${c("Curtidas por post",fmtN(d.curtidas))}${c("Comentários por post",fmtN(d.comentarios))}${c("Engajamento",pct(d.eng))}
+    ${c("Alcance por post",fmtN(d.alcance_post))}${c("Salvos por post",fmtN(d.salvos))}${c("Posts por semana",fmtN(d.por_semana))}${c("Reels nos últimos posts",pct(d.reels))}${c("Alcance dos stories",fmtN(d.alcN))}${c("Público no Brasil",pct(d.br))}
+    ${c("Público 18 a 34",pct(d.idade))}${c("Gênero",fmtN(d.genero))}${c("Principais cidades",d.cidades&&d.cidades.length?esc(d.cidades.join(", ")):"–")}</div>
+    ${d.ultimos&&d.ultimos.length?`<h3>Últimos posts</h3><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th class="num">Curtidas</th><th class="num">Comentários</th><th class="num">Alcance</th><th class="num">Salvos</th><th></th></tr></thead><tbody>${d.ultimos.map(m=>`<tr><td>${esc(m.data.split("-").reverse().join("/"))}</td><td>${esc(m.tipo)}</td><td class="num">${fmtN(m.curtidas)}</td><td class="num">${fmtN(m.comentarios)}</td><td class="num">${fmtN(m.alcance)}</td><td class="num">${fmtN(m.salvos)}</td><td>${m.link?`<a href="${esc(m.link)}" target="_blank" rel="noopener">abrir</a>`:""}</td></tr>`).join("")}</tbody></table></div>`:""}</div>`;
+  const f=$("av-form");
+  for(const k of ["h","nome","seg","inter","alcN","br","idade"]) f.elements[k].value = d[k]!=null&&d[k]!==""?d[k]:"";
+  avPaint();
+  const falta=[...(d.faltam||[]),"nicho"];
+  igMsg("warn","preencher à mão: "+falta.join(", "));
+  f.elements.cat.focus();
+  $("ig-det").scrollIntoView({behavior:"smooth",block:"start"});
+}
+if(IG_ON){
+  $("ped-btn").disabled=false;
+  $("ped-form").addEventListener("submit", async e=>{ e.preventDefault();
+    const f=e.target, b=$("ped-btn"); b.disabled=true;
+    try{ const r=await fetch("/api/ig/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({h:f.elements.h.value})}), d=await r.json();
+      if(!r.ok) throw new Error(d.erro||"não foi possível criar o pedido");
+      const l=pedLoad(); l.unshift({id:d.id,h:d.h,criado:d.criado,status:d.status,link:d.link}); pedSave(l); renderPed(); f.reset();
+      $("ped-msg").innerHTML=`<span>Link para <b>${esc(d.h)}</b>:</span><code>${esc(d.link)}</code><button class="btn sm" data-copy="0">Copiar</button>`;
+    }catch(err){ $("ped-msg").innerHTML=`<span class="tag bad">${esc(err.message)}</span>`; }
+    b.disabled=false; });
+  document.addEventListener("click", async e=>{
+    const t=e.target.closest("[data-copy],[data-ver],[data-delp]"); if(!t) return;
+    const l=pedLoad();
+    if(t.dataset.copy!=null){ const p=l[+t.dataset.copy]; try{ await navigator.clipboard.writeText(p.link); t.textContent="Copiado ✓"; }catch(err){ prompt("Copie o link:", p.link); } return; }
+    if(t.dataset.delp!=null){ const p=l[+t.dataset.delp]; if(!confirm(`Excluir o pedido de ${p.h}? Os dados dele saem do servidor.`)) return; fetch("/api/ig/pedido/"+p.id,{method:"DELETE"}).catch(()=>{}); l.splice(+t.dataset.delp,1); pedSave(l); renderPed(); return; }
+    if(t.dataset.ver!=null){ const p=l[+t.dataset.ver]; t.disabled=true;
+      try{ const r=await fetch("/api/ig/pedido/"+p.id), d=await r.json(); if(!r.ok||!d.dados) throw new Error(d.erro||"sem dados"); renderDet(p,d.dados); }catch(err){ igMsg("bad",err.message); }
+      t.disabled=false; }
+  });
+  pedAtualizar(); setInterval(pedAtualizar, 15000);
+}
+renderPed();
 (function igFill(){
   const q = new URLSearchParams(location.search), raw = q.get("ig"), err = q.get("ig_erro"), conta = q.get("ig_conta");
   if(!raw && !err && !conta) return;

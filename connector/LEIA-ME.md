@@ -1,17 +1,15 @@
 # Conector Instagram da avaliação de perfil
 
-## Busca pelo @ (padrão desde 13/11)
+## Pedido de autorização (padrão desde 13/11)
 
-Na avaliação, digite o @ do candidato e clique em **Buscar pelo @**. O servidor consulta o perfil público pela API da Meta (Business Discovery) e preenche nome, seguidores e curtidas + comentários por post (média dos últimos 12). Alcance dos stories e público (Brasil, 18–34) não são públicos: ficam à mão.
+1. Na avaliação, digite o @ e clique em **Pedir autorização**. O servidor cria um pedido (/var/lib/waytop-ig/pedidos/<id>.json) e devolve o link `https://waytop.7bee.ai/api/ig/autorizar/<id>`.
+2. Mande o link ao candidato (botões Copiar link e WhatsApp). Na lista, o pedido fica **aguardando aprovação**; a página confere a cada 15 s.
+3. O candidato abre o link, clica em **Autorizar com o Instagram** e entra na Meta. Os números são lidos uma vez, gravados no pedido e o token é descartado.
+4. O status muda para **aprovado** e o botão **Ver dados** mostra perfil, bio, seguidores, seguindo, publicações, curtidas, comentários, alcance e salvos por post, engajamento, posts por semana, % de Reels, alcance dos stories, público (Brasil, 18–34, gênero, cidades) e os últimos posts. O nicho é escolhido à mão.
 
-- Só funciona com contas profissionais (Criador ou Comercial). Perfil pessoal não retorna nada.
-- Configuração única: clique em **Conectar conta da WAYTOP** e entre com o Instagram profissional da WAYTOP. O acesso fica em /var/lib/waytop-ig/conta.json (só o serviço lê). Para trocar de conta, apague esse arquivo no servidor.
+A lista de pedidos fica guardada no navegador de quem criou (os ids); os dados ficam no servidor. Enquanto o app estiver em modo de desenvolvimento, só contas testadoras conseguem autorizar. Para qualquer candidato, o app precisa da Análise do app da Meta.
 
-O fluxo antigo, em que o candidato entra com a conta dele (`/api/ig/login`), continua no servidor, mas não aparece mais na página.
-
-O candidato clica em **Conectar Instagram do candidato** no dashboard, entra com a conta dele e autoriza. O servidor lê os números e devolve ao formulário, que calcula a nota. Nenhum token fica guardado.
-
-O botão só funciona na versão hospedada (waytop.7bee.ai). Na versão do Claude o formulário é manual.
+A busca pelo @ (Business Discovery, `/api/ig/perfil`) e o login direto (`/api/ig/login`) continuam no servidor, sem botão na página.
 
 ## O que vem do Instagram
 
