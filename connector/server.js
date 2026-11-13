@@ -121,7 +121,7 @@ async function medir(token) {
   const gen = await demo("gender");
   if (gen.tot) { const f = gen.res.filter(r => r.dimension_values?.[0] === "F").reduce((s, r) => s + r.value, 0); genero = `${Math.round(f / gen.tot * 100)}% mulheres`; }
   const cid = await demo("city");
-  if (cid.tot) cidades = cid.res.sort((a, b) => b.value - a.value).slice(0, 3).map(r => `${r.dimension_values?.[0]} (${Math.round(r.value / cid.tot * 100)}%)`);
+  if (cid.tot) cidades = cid.res.sort((a, b) => b.value - a.value).map(r => ({ nome: r.dimension_values?.[0] || "", pct: Math.round(r.value / cid.tot * 1000) / 10 }));
   const faltam = [];
   if (inter === "") faltam.push("curtidas e comentários");
   if (alcN === "") faltam.push("alcance dos stories (sem story ativo agora)");

@@ -260,6 +260,17 @@ tfoot td{border-top:2px solid var(--border);font-weight:800}
 .ig-top{display:flex;gap:12px;align-items:center;margin-bottom:12px}.ig-top img{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--secondary)}.ig-top b{font-size:16px}.ig-top p{margin:2px 0 0;font-size:12px;color:var(--muted-2);white-space:pre-line}
 .ig-stats{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}@media(min-width:720px){.ig-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(min-width:1080px){.ig-stats{grid-template-columns:repeat(6,minmax(0,1fr))}}
 .ig-stats div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 11px;min-width:0}.ig-stats span{display:block;font-size:11px;color:var(--muted);font-weight:600}.ig-stats b{font-size:15px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cid-wrap{position:relative;padding:0!important;border:0!important;background:none!important}
+.cid-btn{width:100%;height:100%;text-align:left;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 11px;cursor:pointer;color:var(--fg);font:inherit}
+.cid-btn:hover,.cid-btn[aria-expanded="true"]{border-color:var(--accent)}
+.cid-btn b{display:flex;align-items:center;gap:6px;font-size:15px}.cid-btn b em{font-style:normal;font-size:12px;color:var(--muted-2);font-weight:600}.cid-btn svg{width:14px;height:14px;margin-left:auto;flex:none;transition:transform .15s}.cid-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.ig-stats .cid-menu{position:absolute;z-index:30;top:calc(100% + 6px);right:0;width:min(280px,86vw);max-height:min(60vh,360px);overflow-y:auto;background:var(--card);border:1px solid var(--border-2);border-radius:14px;padding:6px;box-shadow:0 18px 40px rgb(0 0 0 / .35)}
+.cid-menu[hidden]{display:none}
+.ig-stats .cid-it{background:none;border:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px}.ig-stats .cid-it:hover{background:var(--secondary)}
+.ig-stats .cid-it>div{flex:1;min-width:0;position:relative;padding:0 0 5px;background:none;border:0;border-radius:0}.ig-stats .cid-n{display:inline}.cid-it b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cid-it small{display:block;font-size:11px;color:var(--muted)}
+.cid-it i{position:absolute;left:0;bottom:0;height:3px;border-radius:2px;background:var(--accent);opacity:.7}
+.cid-it em{font-style:normal;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
+.cid-n{width:20px;font-size:11px;color:var(--muted);font-weight:700;text-align:right}
 .ig-det h3{font-size:13px;margin:14px 0 6px;color:var(--muted-2)}
 .note{font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;margin-top:14px}
 .note b{color:var(--muted-2);font-weight:700}
@@ -1059,13 +1070,29 @@ async function pedAtualizar(){
   }
   if(mudou){ pedSave(l); renderPed(); if(l.some(p=>p.status==="aprovado"&&!p.nalista)) pedAtualizar(); }
 }
+/* Cidades: menu suspenso no padrão do seletor de unidades do dashboard CDT */
+function cidadesHTML(l){
+  if(!l||!l.length) return `<div><span>Cidades</span><b>–</b></div>`;
+  const it=l.map(x=>typeof x==="string"?(m=>({nome:m?m[1]:x,pct:m?+m[2]:null}))(x.match(/^(.*) \((\d+(?:[.,]\d+)?)%\)$/)):x);
+  const sp=n=>{ const [c,...r]=String(n).split(", "); return [c, r.join(", ").replace(/ \(state\)$/,"")]; };
+  const pc=v=>v==null?"":String(v).replace(".",",")+"%";
+  const [c0]=sp(it[0].nome), mx=Math.max(...it.map(x=>x.pct||0))||1;
+  return `<div class="cid-wrap"><button type="button" class="cid-btn" aria-haspopup="listbox" aria-expanded="false"><span>Principais cidades · ${it.length}</span><b>${esc(c0)} <em>${pc(it[0].pct)}</em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></b></button>
+    <div class="cid-menu" role="listbox" hidden>${it.map((x,i)=>{ const [c,uf]=sp(x.nome); return `<div class="cid-it"><span class="cid-n">${i+1}</span><div><b>${esc(c)}</b><small>${esc(uf)}</small><i style="width:${(x.pct||0)/mx*100}%"></i></div><em>${pc(x.pct)}</em></div>`; }).join("")}</div></div>`;
+}
+document.addEventListener("click", e=>{
+  const b=e.target.closest(".cid-btn");
+  document.querySelectorAll(".cid-menu:not([hidden])").forEach(m=>{ if(!b||m.previousElementSibling!==b){ m.hidden=true; m.previousElementSibling.setAttribute("aria-expanded","false"); } });
+  if(b){ const m=b.nextElementSibling; m.hidden=!m.hidden; b.setAttribute("aria-expanded", String(!m.hidden)); }
+});
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") document.querySelectorAll(".cid-menu:not([hidden])").forEach(m=>m.hidden=true); });
 function renderDet(p, d){
   const c=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
   const pct=v=>v===""||v==null?"–":String(v).replace(".",",")+"%";
   $("ig-det").innerHTML=`<div class="ig-det"><div class="ig-top">${d.foto?`<img src="${esc(d.foto)}" alt="">`:""}<div><b>${esc(d.h)}</b> ${esc(d.nome)}<p>${esc(d.bio)}${d.site?`\n${esc(d.site)}`:""}</p></div></div>
     <div class="ig-stats">${c("Seguidores",fmtN(d.seg))}${c("Seguindo",fmtN(d.seguindo))}${c("Publicações",fmtN(d.posts_total))}${c("Curtidas por post",fmtN(d.curtidas))}${c("Comentários por post",fmtN(d.comentarios))}${c("Engajamento",pct(d.eng))}
     ${c("Alcance por post",fmtN(d.alcance_post))}${c("Salvos por post",fmtN(d.salvos))}${c("Posts por semana",fmtN(d.por_semana))}${c("Reels nos últimos posts",pct(d.reels))}${c("Alcance dos stories",fmtN(d.alcN))}${c("Público no Brasil",pct(d.br))}
-    ${c("Público 18 a 34",pct(d.idade))}${c("Gênero",fmtN(d.genero))}${c("Principais cidades",d.cidades&&d.cidades.length?esc(d.cidades.join(", ")):"–")}</div>
+    ${c("Público 18 a 34",pct(d.idade))}${c("Gênero",fmtN(d.genero))}${cidadesHTML(d.cidades)}</div>
     ${d.ultimos&&d.ultimos.length?`<h3>Últimos posts</h3><div class="tbl-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th class="num">Curtidas</th><th class="num">Comentários</th><th class="num">Alcance</th><th class="num">Salvos</th><th></th></tr></thead><tbody>${d.ultimos.map(m=>`<tr><td>${esc(m.data.split("-").reverse().join("/"))}</td><td>${esc(m.tipo)}</td><td class="num">${fmtN(m.curtidas)}</td><td class="num">${fmtN(m.comentarios)}</td><td class="num">${fmtN(m.alcance)}</td><td class="num">${fmtN(m.salvos)}</td><td>${m.link?`<a href="${esc(m.link)}" target="_blank" rel="noopener">abrir</a>`:""}</td></tr>`).join("")}</tbody></table></div>`:""}</div>`;
   const f=$("av-form");
   for(const k of ["h","nome","seg","inter","alcN","br","idade"]) f.elements[k].value = d[k]!=null&&d[k]!==""?d[k]:"";
