@@ -24,7 +24,7 @@ nginx -t && systemctl reload nginx
 
 echo "==> 4/5 HTTPS"
 if getent hosts $DOM >/dev/null; then
-  certbot --nginx -d $DOM --non-interactive --agree-tos --redirect -m "${CERT_EMAIL:-admin@7bee.ai}" || echo "   certbot falhou: confira o DNS e rode de novo"
+  certbot --nginx -d $DOM --non-interactive --agree-tos --redirect --register-unsafely-without-email || echo "   certbot falhou: confira o DNS e rode de novo"
 else
   echo "   $DOM ainda não aponta para este servidor. Crie o registro DNS e rode o script de novo."
 fi
