@@ -18,7 +18,7 @@
   --muted:#6b6b80; --muted-2:#8a8aa3; --border:#1e1e2e; --border-2:#262638; --secondary:#1a1a26;
   --accent:#fb923c; --accent-2:#fdba74; --accent-deep:#ea580c; --on-accent:#1a0d00;
   --mel-1:#ffedd5; --mel-2:#fdba74; --mel-3:#fb923c; --mel-4:#f97316; --mel-5:#ea580c;
-  --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --info:#38bdf8;
+  --ok:#4ade80; --lime:#c6f25a; --warn:#fbbf24; --bad:#f87171; --info:#38bdf8;
   --gold:hsl(45 100% 50%); --silver:hsl(0 0% 75%); --bronze:hsl(30 60% 45%);
   --shadow-lift:inset 0 0 31px rgb(251 146 60 / .10),0 0 24px rgb(251 146 60 / .10);
   --f-ui:'Figtree',system-ui,-apple-system,sans-serif;
@@ -37,7 +37,7 @@
   --muted:#a39cb8; --muted-2:#bdb6d2; --border:#2a2440; --border-2:#352d50; --secondary:#1e1930;
   --accent:#a78bfa; --accent-2:#c4b5fd; --accent-deep:#7c3aed; --on-accent:#1b1033;
   --mel-1:#ede9fe; --mel-2:#c4b5fd; --mel-3:#a78bfa; --mel-4:#8b5cf6; --mel-5:#7c3aed;
-  --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --info:#38bdf8;
+  --ok:#4ade80; --lime:#c6f25a; --warn:#fbbf24; --bad:#f87171; --info:#38bdf8;
   --shadow-lift:0 18px 40px -18px rgba(0,0,0,.8),0 0 0 1px rgb(167 139 250 / .24),0 0 32px -8px rgb(167 139 250 / .28);
   color-scheme:dark}
 *{box-sizing:border-box}
@@ -113,7 +113,7 @@ h1::before{content:"";width:12px;height:12px;border-radius:4px;background:var(--
 .card-h p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
 .tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--secondary);color:var(--ink);white-space:nowrap}
 .tag.acc{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent-2)}
-.tag.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.tag.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}.tag.lime{background:color-mix(in srgb,var(--lime) 14%,transparent);color:var(--lime)}
 .tag.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 .tag.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
 
@@ -1016,11 +1016,11 @@ function aval(c){
   return { n: w ? Math.round(tem.reduce((a,x)=>a+x.s*x.w,0)/w*100) : 0, cob: w, parts, porte: pt.n };
 }
 const nota = c => aval(c).n;
-const corNota = n => n>=70?'var(--ok)':n>=50?'var(--warn)':'var(--bad)';
+const corNota = n => n>=70?'var(--lime)':n>=50?'var(--warn)':'var(--bad)';
 const AV_KEY = "wt-avaliados";
 function avLoad(){ try{ return JSON.parse(localStorage.getItem(AV_KEY)||"[]"); }catch(e){ return []; } }
 function avSave(l){ try{ localStorage.setItem(AV_KEY, JSON.stringify(l)); }catch(e){} }
-const parecer = c => { const a=aval(c); return a.cob<55?'<span class="tag">faltam dados</span>':a.n>=70?'<span class="tag ok">contratar</span>':a.n>=50?'<span class="tag warn">conversar</span>':'<span class="tag bad">não indicado</span>'; };
+const parecer = c => { const a=aval(c); return a.cob<55?'<span class="tag">faltam dados</span>':a.n>=70?'<span class="tag lime">contratar</span>':a.n>=50?'<span class="tag warn">conversar</span>':'<span class="tag bad">não indicado</span>'; };
 const scoreHTML = n => `<span class="score" style="color:${corNota(n)};background:color-mix(in srgb,${corNota(n)} 14%,transparent)">${n}</span>`;
 const pct1 = v => numOk(v)==null ? "–" : (Math.round(v*10)/10).toLocaleString("pt-BR")+"%";
 function stTxt(c){
