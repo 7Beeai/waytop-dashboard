@@ -433,8 +433,9 @@ section[hidden],.dp[hidden]{display:none!important}
               <div class="rank" id="formatos"></div>
             </div>
             <div class="card">
-              <div class="card-h"><div><h2>Melhor horário de postagem</h2><p>Inícios de conversa por faixa de horário do post</p></div></div>
+              <div class="card-h"><div><h2 id="hr-tit">Melhor horário de postagem</h2><p id="hr-sub"></p></div><div class="pill-tabs" id="hr-modo"><button type="button" data-hr="post" class="on">Post</button><button type="button" data-hr="clique">Clique</button></div></div>
               <div class="rank" id="horarios"></div>
+              <p class="note" id="hr-nota"></p>
             </div>
           </div>
           <div class="card">
@@ -671,6 +672,9 @@ const JORNADA = [
 ];
 const ETAPAS = ["Lead","Conversa","Agendou","Reunião","Matrícula"];
 const HORARIOS_BASE = [["07h – 09h",312],["12h – 14h",401],["18h – 20h",688],["20h – 22h",742],["22h – 00h",241]];
+// hora do clique: os cliques se espalham depois do post e avançam pela noite
+const CLIQUES_BASE = [["07h – 09h",228],["12h – 14h",347],["18h – 20h",512],["20h – 22h",698],["22h – 00h",599]];
+let HR_MODO = "post";
 const CAND = [
   {nome:"Helena Costa", h:"@helenacosta", seg:48200, eng:4.8, alc:9.1, br:93, idade:71, cat:"Viagem"},
   {nome:"Marcos Vieira", h:"@marcosvieira.dev", seg:126000, eng:1.6, alc:4.2, br:88, idade:64, cat:"Tecnologia"},
@@ -717,6 +721,7 @@ function snapshot(a,b){
   T.equipe = Math.round(T.agend*.117); T.ia2 = Math.round(T.agend*.052); T.ia = T.agend - T.equipe - T.ia2;
   T.nsRecup = Math.round(T.ns*.33); T.desp = S(41,"desp");
   T.horarios = HORARIOS_BASE.map(([n,v])=>[n,S(v,n)]);
+  T.cliques = CLIQUES_BASE.map(([n,v])=>[n,S(v,"c"+n)]);
   return {INF, ALUNOS, T, f, days, metaSt:Math.max(1,Math.round(3*days/7)), metaRe:days>=28?1:0};
 }
 
@@ -826,7 +831,7 @@ function render(){
     {n:"Cliques por story", v:nSt?Math.round(cSt/nSt):0, lbl:nSt?N(Math.round(cSt/nSt)):"–"},
     {n:"Cliques por Reels", v:nRe?Math.round(cRe/nRe):0, lbl:nRe?N(Math.round(cRe/nRe)):"–", alt:true},
   ],{pos:false});
-  rankRows("horarios", T.horarios.map(([n,v])=>({n, v, lbl:`${N(v)} conversas`})), {pos:false});
+  renderHorarios();
   statList("rede", INF.filter(i=>i.por).map(i=>{const p=INF.find(x=>x.id===i.por);return p?{l:`${p.nome} → ${i.nome}`, s:`${i.nome.split(" ")[0]} está no ${i.mes}º mês · ${i.mat} matrículas no período × R$ 50 para ${p.nome.split(" ")[0]}`, v:BRL(i.mat*50)}:null;}).filter(Boolean));
   renderCad();
 
@@ -926,6 +931,15 @@ const pctTxt = (c,p) => { if(!p) return '<span>sem base</span>'; const v=Math.ro
 const rate = (a,b) => b ? a/b : 0;
 const pc = x => Math.round(x*100)+"%";
 function bestDay(id,a,b){ let best=null,bv=-1; for(let d=a; d<=b; d=addD(d,1)){ const dw=d.getDay(); const v=(dw===0?.4:dw===6?.7:1)*hash(id+"d"+d.toDateString()); if(v>bv){bv=v;best=d;} } return best; }
+function renderHorarios(){
+  const post = HR_MODO==="post", T = D.T;
+  $("hr-tit").textContent = post ? "Melhor horário de postagem" : "Horário de maior atividade do público";
+  $("hr-sub").textContent = post ? "Inícios de conversa agrupados pela hora em que o post foi publicado" : "Inícios de conversa pela hora do clique no link";
+  $("hr-nota").innerHTML = post ? "Cada conversa conta para o story ou Reels que a gerou. Responde: <b>a que horas postar</b>." : "Mostra quando o público clica e chama. Responde: <b>quando a Alícia.IA e a equipe comercial precisam estar mais atentas</b>.";
+  rankRows("horarios", (post?T.horarios:T.cliques).map(([n,v])=>({n, v, lbl:`${N(v)} conversas`})), {pos:false});
+  document.querySelectorAll("#hr-modo button").forEach(b=>b.classList.toggle("on", b.dataset.hr===HR_MODO));
+}
+document.addEventListener("click", e=>{ const b=e.target.closest("#hr-modo button"); if(!b) return; HR_MODO=b.dataset.hr; renderHorarios(); });
 function bestHour(id,a){ return [...HORARIOS_BASE].map(([n,v])=>[n,v*(.7+.6*hash(id+n+a.toDateString()))]).sort((x,y)=>y[1]-x[1])[0][0]; }
 const TIPOS = [
   {t:"Enquete nos stories", f:(n,d,h)=>`<b>${n}</b> abriu a sequência com uma enquete ("Você já pensou em estudar fora?") e colocou o link só no terceiro story. Quem votou chegou mais quente na conversa. Postou ${d}, ${h}.`},
