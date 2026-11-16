@@ -74,7 +74,11 @@ body{background:radial-gradient(900px 520px at 8% -8%,rgb(var(--glow-rgb) / .08)
 @media(min-width:1180px){.hero-row{flex-direction:row;justify-content:space-between;align-items:flex-start;padding-right:190px}}
 .brandtag{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;border-radius:14px;background:var(--secondary);padding:6px 12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
 .hero-title{margin:8px 0 2px;font-family:var(--f-display);font-weight:900;font-size:clamp(1.5rem,4vw,2.25rem);letter-spacing:-.015em;line-height:1.08;color:var(--ink)}
-.hero-sub{margin:0;color:var(--muted);font-size:14px}
+.hero-sub{margin:0;color:var(--muted);font-size:14px}.tabnum{font-variant-numeric:tabular-nums}
+.hero-unit{margin-top:12px;display:flex;align-items:center;gap:12px;min-width:0}
+.hu-ico{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:14px;background:var(--accent);color:var(--on-accent)}.hu-ico svg{width:20px;height:20px}
+.hu-txt{display:flex;flex-direction:column;min-width:0}.hu-txt small{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);line-height:1}
+.hu-txt b{font-family:var(--f-display);font-weight:900;line-height:1.15;color:var(--fg);font-size:clamp(1.25rem,2.6vw,1.75rem)}
 .hero-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-size:13px;font-weight:600;cursor:pointer}
 .btn:hover{background:var(--secondary)}
@@ -329,7 +333,8 @@ section[hidden],.dp[hidden]{display:none!important}
       <div>
         <span class="brandtag">WAYTOP</span>
         <p class="hero-title">Dashboard</p>
-        <p class="hero-sub" id="hero-sub">Influencers e indicação de alunos</p>
+        <p class="hero-sub tabnum" id="hero-relogio">&nbsp;</p>
+        <div class="hero-unit"><span class="hu-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><span class="hu-txt"><small>Visão geral</small><b>Comercial</b></span></div>
       </div>
       <div class="hero-actions">
         <button class="btn" id="theme-btn" type="button" aria-label="Alternar modo dia e noite" title="Alternar modo dia e noite" style="width:36px;padding:0;justify-content:center"><svg id="theme-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg><span id="theme-lbl" hidden></span></button>
@@ -349,7 +354,7 @@ section[hidden],.dp[hidden]{display:none!important}
       </div>
     </div>
     <nav class="navpills" id="nav">
-      <a href="#geral" data-v="geral">Comercial</a>
+      <a href="#geral" data-v="geral">Visão geral</a>
       <a href="#influencers" data-v="influencers">Influencers</a>
       <a href="#painel" data-v="painel">Painel do influencer</a>
       <a href="#indicacoes" data-v="indicacoes">Indicação de alunos</a>
@@ -366,7 +371,7 @@ section[hidden],.dp[hidden]{display:none!important}
       <section id="v-geral" data-view="geral">
         <div class="wrap" style="padding:0">
           <div class="head">
-            <div><div class="eyebrow" data-periodo></div><h1>Comercial</h1><p class="sub">Leads de influencers e de indicação de alunos, do primeiro contato com a Alícia até a matrícula paga.</p></div>
+            <div><div class="eyebrow" data-periodo></div><h1>Visão geral</h1><p class="sub">Leads de influencers e de indicação de alunos, do primeiro contato com a Alícia até a matrícula paga.</p></div>
           </div>
 
           <div class="card hot hero">
@@ -1275,4 +1280,9 @@ addEventListener("hashchange", () => { route(); window.scrollTo(0,0); });
 
 render();
 route();
+
+/* Relógio do cabeçalho (igual ao CDT): "segunda-feira, 16 de novembro de 2026 · 11:05:40" */
+(function relogio(){ const el=$("hero-relogio"); const t=()=>{ const d=new Date();
+  el.textContent = d.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+" · "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); };
+  t(); setInterval(t,1000); })();
 </script>
