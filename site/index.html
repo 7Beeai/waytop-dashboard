@@ -150,7 +150,7 @@ h1::before{content:"";width:12px;height:12px;border-radius:4px;background:var(--
 .val{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:700;white-space:nowrap}
 .bar{height:6px;border-radius:999px;background:var(--secondary);overflow:hidden}
 .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--mel-3),var(--mel-5))}
-.bar i.alt{background:var(--info)}
+.bar i.alt{background:var(--info)}.bar i.grp{background:var(--ok)}
 
 /* ===== Funil ===== */
 .funnel{display:flex;flex-direction:column;gap:10px}
@@ -684,6 +684,8 @@ function snapshot(a,b){
     matInf:sum(INF,"mat"), matAl:sum(ALUNOS,"mat")};
   T.ns = Math.min(T.ns, T.agend);
   T.leads=T.leadsInf+T.leadsAl; T.reun=T.agend-T.ns; T.mat=Math.min(T.matInf+T.matAl,T.reun);
+  // Grupo WhatsApp: quem fez a reunião e não fechou entra no grupo de conteúdo gratuito semanal; parte volta e se matricula
+  T.grupoNovos = Math.max(T.reun-T.mat,0); T.grupo = 180 + Math.round(T.grupoNovos*1.5); T.matGrupo = Math.min(S(6,"grupo"), T.grupo); T.mat += T.matGrupo;
   T.pagInf=sum(INF,"total"); T.pagAl=T.matAl*200;
   T.equipe = Math.round(T.agend*.117); T.ia2 = Math.round(T.agend*.052); T.ia = T.agend - T.equipe - T.ia2;
   T.nsRecup = Math.round(T.ns*.33); T.desp = S(41,"desp");
@@ -741,7 +743,7 @@ function render(){
   /* Visão geral */
   const dm = prev.mat ? Math.round((T.mat-prev.mat)/prev.mat*100) : null;
   $("hl-title").textContent = `${N(T.mat)} matrícula${T.mat===1?'':'s'} ${txt}` + (dm===null?'':dm===0?', igual ao período anterior':`, ${Math.abs(dm)}% ${dm>0?'acima':'abaixo'} do período anterior`);
-  $("hl-text").innerHTML = `Influencers trouxeram <b>${N(T.matInf)}</b> e indicações de alunos <b>${N(T.matAl)}</b>. A Alícia agendou <b>${N(T.ia)}</b> reuniões sozinha, a equipe comercial resgatou <b>${N(T.equipe)}</b> e a Alícia recuperou mais <b>${N(T.ia2)}</b> depois das ligações.`;
+  $("hl-text").innerHTML = `Influencers trouxeram <b>${N(T.matInf)}</b>, indicações de alunos <b>${N(T.matAl)}</b> e o Grupo WhatsApp <b>${N(T.matGrupo)}</b>. A Alícia.IA agendou <b>${N(T.ia)}</b> reuniões sozinha, a equipe comercial resgatou <b>${N(T.equipe)}</b> e a Alícia.IA recuperou mais <b>${N(T.ia2)}</b> depois das ligações.`;
   kpis("kpis-geral",[
     {l:"Matrículas", v:N(T.mat), d:delta(T.mat,prev.mat), acc:true},
     {l:"Leads", v:N(T.leads), d:delta(T.leads,prev.leads)},
@@ -758,19 +760,19 @@ function render(){
     {l:"Matrícula", v:T.mat},
   ]);
   statList("resgates",[
-    {l:"Alícia agendou direto", s:"cadência 30 min, 3 h e 24 h", v:N(T.ia)},
+    {l:"Alícia.IA agendou direto", s:"cadência 30 min, 3 h e 24 h", v:N(T.ia)},
     {l:"Resgate", s:"equipe ligou em 48 h ou 72 h e agendou", v:N(T.equipe)},
-    {l:"Resgate IA", s:"voltou para a Alícia e ela agendou", v:N(T.ia2)},
+    {l:"Resgate Alícia.IA", s:"voltou para a Alícia e ela agendou", v:N(T.ia2)},
     {l:"No-show resgatado", s:`Alícia reagendou ${T.nsRecup} de ${T.ns} faltas`, v:P(T.nsRecup,T.ns)},
     {l:"Despedidas", s:"contato futuro em 30 dias", v:N(T.desp)},
   ]);
   rankRows("rank-geral",[...INF].sort((x,y)=>y.mat-x.mat).map(i=>({n:i.nome,h:i.h,v:i.mat,lbl:`${i.mat} mat.`})));
   $("fontes").innerHTML = `<div class="rank">
-    ${[["Influencers",T.leadsInf,T.matInf,false],["Indicação de alunos",T.leadsAl,T.matAl,true]].map(([n,l,m,al])=>`
-    <div class="rbody"><div class="line"><span class="name">${n}</span><span class="val">${N(l)} leads</span></div>
-    <div class="bar"><i class="${al?'alt':''}" style="width:${(T.leads?l/T.leads*100:0).toFixed(1)}%"></i></div>
-    <div class="line" style="margin:6px 0 0"><span class="h" style="font-size:12px;color:var(--muted)">${m} matrículas</span><span class="h" style="font-size:12px;color:var(--muted)">conversão ${P(m,l)}</span></div></div>`).join("")}
-  </div>` + (T.leadsAl&&T.matInf ? `<p class="note">Indicação converte <b>${(T.matAl/T.leadsAl/(T.matInf/T.leadsInf)).toLocaleString("pt-BR",{maximumFractionDigits:1})}x</b> mais que influencer, com volume menor.</p>` : "");
+    ${(tot=>[["Influencers",T.leadsInf,T.matInf,"","leads"],["Indicação de alunos",T.leadsAl,T.matAl,"alt","leads"],["Grupo WhatsApp",T.grupo,T.matGrupo,"grp","no grupo",`${N(T.grupoNovos)} entraram no período`]].map(([n,l,m,cls,un,ex])=>`
+    <div class="rbody"><div class="line"><span class="name">${n}</span><span class="val">${N(l)} ${un}</span></div>
+    <div class="bar"><i class="${cls}" style="width:${(tot?l/tot*100:0).toFixed(1)}%"></i></div>
+    <div class="line" style="margin:6px 0 0"><span class="h" style="font-size:12px;color:var(--muted)">${m} matrículas${ex?` · ${ex}`:""}</span><span class="h" style="font-size:12px;color:var(--muted)">conversão ${P(m,l)}</span></div></div>`).join(""))(T.leadsInf+T.leadsAl+T.grupo)}
+  </div><p class="note"><b>Grupo WhatsApp</b>: quem fez a reunião e não fechou entra no grupo com conteúdo gratuito semanal. Conta como fonte a matrícula de quem voltou pelo grupo e agendou de novo.</p>` + (T.leadsAl&&T.matInf ? `<p class="note">Indicação converte <b>${(T.matAl/T.leadsAl/(T.matInf/T.leadsInf)).toLocaleString("pt-BR",{maximumFractionDigits:1})}x</b> mais que influencer, com volume menor.</p>` : "");
   chart();
 
   /* Influencers */
