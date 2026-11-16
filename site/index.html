@@ -743,12 +743,12 @@ function render(){
   $("hl-title").textContent = `${N(T.mat)} matrícula${T.mat===1?'':'s'} ${txt}` + (dm===null?'':dm===0?', igual ao período anterior':`, ${Math.abs(dm)}% ${dm>0?'acima':'abaixo'} do período anterior`);
   $("hl-text").innerHTML = `Influencers trouxeram <b>${N(T.matInf)}</b> e indicações de alunos <b>${N(T.matAl)}</b>. A Alícia agendou <b>${N(T.ia)}</b> reuniões sozinha, a equipe comercial resgatou <b>${N(T.equipe)}</b> e a Alícia recuperou mais <b>${N(T.ia2)}</b> depois das ligações.`;
   kpis("kpis-geral",[
+    {l:"Matrículas", v:N(T.mat), d:delta(T.mat,prev.mat), acc:true},
     {l:"Leads", v:N(T.leads), d:delta(T.leads,prev.leads)},
     {l:"Agendamentos", v:N(T.agend), d:`${P(T.agend,T.leads)} dos leads`},
     {l:"No-show", v:P(T.ns,T.agend), d:`${T.ns} faltas · ${T.nsRecup} reagendadas`},
     {l:"Reuniões feitas", v:N(T.reun), d:`${Math.max(T.reun-T.mat,0)} foram para o grupo`},
-    {l:"Matrículas", v:N(T.mat), d:delta(T.mat,prev.mat), acc:true},
-    {l:"A pagar", v:BRL(T.pagInf+T.pagAl), d:"no mês seguinte"},
+    {l:"Conversão", v:P(T.mat,T.reun), d:(()=>{ if(!prev.reun) return `${N(T.mat)} matrículas de ${N(T.reun)} reuniões`; const pp=Math.round((T.mat/(T.reun||1)-prev.mat/prev.reun)*1000)/10; return pp===0?"igual ao período anterior":`${pp>0?"+":""}${String(pp).replace(".",",")} p.p. vs período anterior`; })()},
   ]);
   funnel("funnel-geral",[
     {l:"Conversas iniciadas", s:"links e números próprios", v:T.convInf+T.leadsAl},
