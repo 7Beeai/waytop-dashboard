@@ -408,7 +408,7 @@ section[hidden],.dp[hidden]{display:none!important}
           <div class="card">
             <div class="card-h"><div><h2>Matrículas por mês</h2><p id="chart-sub"></p></div></div>
             <div class="chart" id="chart-mes"></div>
-            <div class="legend"><span><i style="background:var(--accent)"></i>Influencers</span><span><i style="background:var(--info)"></i>Indicação de alunos</span></div>
+            <div class="legend"><span><i style="background:var(--accent)"></i>Influencers</span><span><i style="background:var(--info)"></i>Indicação de alunos</span><span><i style="background:var(--ok)"></i>Grupo do WhatsApp</span></div>
           </div>
         </div>
       </section>
@@ -976,17 +976,18 @@ $("tbl-inf").addEventListener("click", e => { const tr = e.target.closest("tr[da
 
 /* Gráfico: últimos 6 meses, o atual até hoje */
 function chart(){
-  const meses=[]; for(let k=5;k>=0;k--){ const m=new Date(TODAY.getFullYear(),TODAY.getMonth()-k,1); const e=k?monthEnd(m):TODAY; const s=snapshot(m,e).T; meses.push({l:MES_CURTO[m.getMonth()]+(k?'':'*'), inf:s.matInf, al:s.matAl, cur:!k}); }
+  const meses=[]; for(let k=5;k>=0;k--){ const m=new Date(TODAY.getFullYear(),TODAY.getMonth()-k,1); const e=k?monthEnd(m):TODAY; const s=snapshot(m,e).T; meses.push({l:MES_CURTO[m.getMonth()]+(k?'':'*'), inf:s.matInf, al:s.matAl, gr:s.matGrupo, cur:!k}); }
   const W=900,H=230,pl=36,pr=12,pt=18,pb=28, iw=W-pl-pr, ih=H-pt-pb;
-  const top = Math.max(...meses.map(m=>m.inf+m.al),1); const step = top>80?40:20; const max=Math.ceil(top/step)*step;
+  const top = Math.max(...meses.map(m=>m.inf+m.al+m.gr),1); const step = top>80?40:20; const max=Math.ceil(top/step)*step;
   const bw = iw/meses.length*0.52; let g="";
   for(let t=0;t<=max;t+=step){ const y=pt+ih-(t/max*ih); g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--border)"/><text x="${pl-8}" y="${y+4}" text-anchor="end" fill="var(--muted)" font-size="11">${t}</text>`; }
   meses.forEach((m,i)=>{
     const cx = pl + iw/meses.length*(i+.5), x = cx-bw/2;
-    const hI=m.inf/max*ih, hA=m.al/max*ih, yA=pt+ih-hA, yI=yA-hI;
-    if(hA) g += `<rect x="${x}" y="${yA}" width="${bw}" height="${hA}" fill="var(--info)" rx="3"/>`;
+    const hG=m.gr/max*ih, hI=m.inf/max*ih, hA=m.al/max*ih, yG=pt+ih-hG, yA=yG-hA, yI=yA-hI;
+    if(hG) g += `<rect x="${x}" y="${yG}" width="${bw}" height="${hG}" fill="var(--ok)" rx="3"/>`;
+    if(hA>2) g += `<rect x="${x}" y="${yA}" width="${bw}" height="${hA-(hG?2:0)}" fill="var(--info)" rx="3"/>`;
     if(hI>2) g += `<rect x="${x}" y="${yI}" width="${bw}" height="${hI-2}" fill="var(--accent)" opacity="${m.cur?1:.75}" rx="3"/>`;
-    g += `<text x="${cx}" y="${yI-6}" text-anchor="middle" fill="${m.cur?'var(--accent-2)':'var(--muted-2)'}" font-size="12" font-weight="700">${m.inf+m.al}</text>`;
+    g += `<text x="${cx}" y="${yI-6}" text-anchor="middle" fill="${m.cur?'var(--accent-2)':'var(--muted-2)'}" font-size="12" font-weight="700">${m.inf+m.al+m.gr}</text>`;
     g += `<text x="${cx}" y="${H-8}" text-anchor="middle" fill="var(--muted-2)" font-size="12">${m.l}</text>`;
   });
   $("chart-mes").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Matrículas por mês">${g}</svg>`;
