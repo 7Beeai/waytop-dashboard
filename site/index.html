@@ -327,7 +327,7 @@ section[hidden],.dp[hidden]{display:none!important}
     <img class="mascote" src="beerobot.webp" alt="" aria-hidden="true" draggable="false" decoding="async">
     <div class="hero-row">
       <div>
-        <span class="brandtag">7Bee.AI · WAYTOP</span>
+        <span class="brandtag">WAYTOP</span>
         <p class="hero-title">Dashboard Comercial</p>
         <p class="hero-sub" id="hero-sub">Influencers e indicação de alunos</p>
       </div>
@@ -747,7 +747,7 @@ function render(){
     {l:"Leads", v:N(T.leads), d:delta(T.leads,prev.leads)},
     {l:"Agendamentos", v:N(T.agend), d:`${P(T.agend,T.leads)} dos leads`},
     {l:"No-show", v:P(T.ns,T.agend), d:`${T.ns} faltas · ${T.nsRecup} reagendadas`},
-    {l:"Reuniões feitas", v:N(T.reun), d:`${Math.max(T.reun-T.mat,0)} foram para o grupo`},
+    {l:"Reuniões realizadas", v:N(T.reun), d:`${Math.max(T.reun-T.mat,0)} foram para o grupo`},
     {l:"Conversão", v:P(T.mat,T.reun), d:(()=>{ if(!prev.reun) return `${N(T.mat)} matrículas de ${N(T.reun)} reuniões`; const pp=Math.round((T.mat/(T.reun||1)-prev.mat/prev.reun)*1000)/10; return pp===0?"igual ao período anterior":`${pp>0?"+":""}${String(pp).replace(".",",")} p.p. vs período anterior`; })()},
   ]);
   funnel("funnel-geral",[
