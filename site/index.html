@@ -238,7 +238,7 @@ tfoot td{border-top:2px solid var(--border);font-weight:800}
 .av-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--muted-2)}
 .av-form label small{font-size:11px;font-weight:500;color:var(--muted)}
 .av-form input{height:38px;background:var(--field-bg);border:1px solid var(--field-border);border-radius:10px;padding:0 12px;color:var(--fg);font:inherit;font-size:14px;font-weight:600}
-.av-form input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.av-form select{height:38px;background:var(--field-bg);border:1px solid var(--field-border);border-radius:10px;padding:0 10px;color:var(--fg);font:inherit;font-size:14px;font-weight:600}.av-form select:focus,.av-form input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
 .av-res{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card-2);border:1px dashed var(--border-2);border-radius:14px;padding:12px 14px;font-size:13px;color:var(--muted-2)}
 .av-res .score{display:inline-grid;place-items:center;font-size:20px;line-height:1;padding:8px 12px}
 .av-res .parts{display:flex;gap:14px;flex-wrap:wrap}.av-res .parts b{color:var(--fg)}
@@ -436,8 +436,20 @@ section[hidden],.dp[hidden]{display:none!important}
             </div>
           </div>
           <div class="card">
-            <div class="card-h"><div><h2>Rede de indicação entre influencers</h2><p>Comissão em duas camadas: direta e indireta</p></div><span class="tag warn">valor indireto a definir</span></div>
+            <div class="card-h"><div><h2>Rede de indicação entre influencers</h2><p>Quem indica outro influencer aprovado ganha R$ 50 por matrícula dele</p></div><span class="tag">R$ 50 por matrícula</span></div>
             <div class="stat-list" id="rede"></div>
+            <p class="note"><b>Comissão indireta</b>: só entre influencers e só na indicação direta (uma camada). Cada matrícula do indicado paga R$ 250 a ele e mais R$ 50 a quem indicou, desde a primeira matrícula e enquanto o indicado estiver ativo, mesmo que quem indicou saia. Pago no mês seguinte, sem estorno. Matrículas indiretas não contam para o bônus de 10.</p>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>Cadastrar novo influencer</h2><p>Informe quem indicou para a comissão indireta começar a contar na primeira matrícula</p></div></div>
+            <form id="cad-form" class="av-form" autocomplete="off">
+              <label>Nome<input name="nome" required placeholder="Nome do influencer"></label>
+              <label>Instagram<input name="h" required placeholder="@usuario"></label>
+              <label>Início do contrato<input name="ini" type="date" required></label>
+              <label>Indicado por<select name="por" id="cad-por"></select></label>
+              <div class="av-res"><span id="cad-msg">O novo influencer entra na lista com os números zerados até as primeiras matrículas.</span><span class="act"><button type="submit" class="btn pri">Cadastrar</button></span></div>
+            </form>
+            <div class="stat-list" id="cad-lista" style="margin-top:14px"></div>
           </div>
         </div>
       </section>
@@ -519,7 +531,7 @@ section[hidden],.dp[hidden]{display:none!important}
           <div class="head"><div><div class="eyebrow" data-periodo></div><h1>Pagamentos</h1><p class="sub">Tudo o que foi gerado no período e é pago no mês seguinte. O fixo dos influencers entra proporcional aos dias.</p></div><span class="tag warn">dia do pagamento a confirmar: 15 ou 20</span></div>
           <div class="kpis" id="kpis-pag"></div>
           <div class="card">
-            <div class="card-h"><div><h2>Influencers</h2><p>Fixo + R$ 250 por matrícula paga + bônus. Sem estorno.</p></div></div>
+            <div class="card-h"><div><h2>Influencers</h2><p>Fixo + R$ 250 por matrícula paga + bônus + R$ 50 por matrícula de influencer indicado. Sem estorno.</p></div></div>
             <div class="tbl-wrap"><table id="tbl-pag-inf"></table></div>
           </div>
           <div class="card">
@@ -625,9 +637,9 @@ const jit = (id,a,b) => .85+.3*hash(id+a.toDateString()+b.toDateString());
 const INF_BASE = [
   {id:"ju",   nome:"Juliana Prado",  h:"@ju.prado.trip",   ini:new Date(2026,5,1), leads:214, conv:251, agend:96, ns:18, mat:19, acum0:22, st:14, reels:2, cliqSt:2140, cliqRe:980, por:null},
   {id:"rafa", nome:"Rafael Mendes",  h:"@rafa.mendes",     ini:new Date(2026,6,1), leads:168, conv:197, agend:71, ns:15, mat:14, acum0:16, st:13, reels:1, cliqSt:1610, cliqRe:870, por:null},
-  {id:"cami", nome:"Camila Torres",  h:"@camitorres",      ini:new Date(2026,7,1), leads:131, conv:150, agend:55, ns:9,  mat:11, acum0:11, st:12, reels:1, cliqSt:1320, cliqRe:510, por:"ju"},
+  {id:"cami", nome:"Camila Torres",  h:"@camitorres",      ini:new Date(2026,7,1), leads:131, conv:150, agend:55, ns:9,  mat:11, acum0:11, st:12, reels:1, cliqSt:1320, cliqRe:510, por:null},
   {id:"bru",  nome:"Bruno Lacerda",  h:"@brunolacerda.fit",ini:new Date(2026,8,1), leads:97,  conv:118, agend:38, ns:8,  mat:7,  acum0:5,  st:13, reels:1, cliqSt:880,  cliqRe:440, por:null},
-  {id:"liv",  nome:"Lívia Andrade",  h:"@livia.andrade",   ini:new Date(2026,8,1), leads:88,  conv:102, agend:33, ns:7,  mat:6,  acum0:3,  st:10, reels:1, cliqSt:760,  cliqRe:300, por:"rafa"},
+  {id:"liv",  nome:"Lívia Andrade",  h:"@livia.andrade",   ini:new Date(2026,8,1), leads:88,  conv:102, agend:33, ns:7,  mat:6,  acum0:3,  st:10, reels:1, cliqSt:760,  cliqRe:300, por:"ju"},
   {id:"dig",  nome:"Diego Sato",     h:"@diegosato",       ini:new Date(2026,9,1), leads:54,  conv:66,  agend:19, ns:5,  mat:3,  acum0:0,  st:8,  reels:0, cliqSt:420,  cliqRe:0,   por:null},
 ];
 // Curso do influencer: unidade e próxima aula (depois virá do sistema da WAYTOP)
@@ -682,9 +694,15 @@ function snapshot(a,b){
     i.fixo = Math.round(i.fixoMes * Math.min(1, days/30));
     i.bonus = i.bonusQtd*1000; i.com = i.mat*250;
     i.total = i.fixo + i.com + i.bonus;
-    i.cpm = i.mat ? i.total/i.mat : null;
     return i;
   });
+  // Comissão indireta: R$ 50 por matrícula de influencer indicado diretamente (uma camada, não conta para bônus)
+  INF.forEach(i=>{
+    const filhos = INF.filter(x=>x.por===i.id);
+    i.indMat = sum(filhos,"mat"); i.ind = i.indMat*50; i.total += i.ind;
+  });
+  // custo/matrícula: os R$ 50 pagos a quem indicou entram no custo da matrícula do indicado
+  INF.forEach(i=>{ const custo = i.fixo + i.com + i.bonus + (INF.some(x=>x.id===i.por)?i.mat*50:0); i.cpm = i.mat ? custo/i.mat : null; });
   const ALUNOS = AL_BASE.map((x,k)=>{const al={...x, ind:S(x.ind,x.cod), agend:S(x.agend,x.cod), mat:S(x.mat,x.cod)}; al.agend=Math.min(al.agend,al.ind); al.mat=Math.min(al.mat,al.agend); return al;});
   const T = {leadsInf:sum(INF,"leads"), leadsAl:sum(ALUNOS,"ind"), convInf:sum(INF,"conv"),
     agend:sum(INF,"agend")+sum(ALUNOS,"agend"), ns:sum(INF,"ns")+S(2,"alns"),
@@ -786,7 +804,7 @@ function render(){
   kpis("kpis-inf",[
     {l:"Influencers ativos", v:INF.length, d:`${INF.filter(i=>i.mes<=3).length} nos 3 primeiros meses`},
     {l:"Matrículas", v:N(T.matInf), d:`${P(T.matInf,T.leadsInf)} dos leads`, acc:true},
-    {l:"Custo por matrícula", v:T.matInf?BRL(T.pagInf/T.matInf):"–", d:"fixo + comissão + bônus"},
+    {l:"Custo por matrícula", v:T.matInf?BRL(T.pagInf/T.matInf):"–", d:"fixo + comissão + bônus + indireta"},
   ]);
   const entregaTag = i => {
     const okSt = i.st>=D.metaSt, okRe = i.reels>=D.metaRe;
@@ -798,7 +816,7 @@ function render(){
       <td class="who"><b>${i.nome}</b><small>${i.h}</small></td><td>${i.mes}º</td>
       <td class="num">${N(i.leads)}</td><td class="num">${i.agend}</td><td class="num">${P(i.ns,i.agend)}</td>
       <td class="num"><b>${i.mat}</b></td><td class="num">${P(i.mat,i.leads)}</td><td class="num">${i.cpm?BRL(i.cpm):'–'}</td><td>${entregaTag(i)}</td></tr>`));
-  $("nota-inf").innerHTML = `<b>Custo por matrícula</b> = fixo (proporcional ao período) + R$ 250 por matrícula + bônus, dividido pelas matrículas pagas. <b>Entregas</b>: 3 stories por semana (${D.metaSt} no período) e 1 Reels por mês.`;
+  $("nota-inf").innerHTML = `<b>Custo por matrícula</b> = fixo (proporcional ao período) + R$ 250 por matrícula + bônus + R$ 50 pagos a quem indicou o influencer (se houver), dividido pelas matrículas pagas. <b>Entregas</b>: 3 stories por semana (${D.metaSt} no período) e 1 Reels por mês.`;
   const cSt = sum(INF,"cliqSt"), cRe = sum(INF,"cliqRe"), nSt=sum(INF,"st"), nRe=sum(INF,"reels");
   rankRows("formatos",[
     {n:"Stories", v:cSt, lbl:`${N(cSt)} cliques`},
@@ -807,7 +825,8 @@ function render(){
     {n:"Cliques por Reels", v:nRe?Math.round(cRe/nRe):0, lbl:nRe?N(Math.round(cRe/nRe)):"–", alt:true},
   ],{pos:false});
   rankRows("horarios", T.horarios.map(([n,v])=>({n, v, lbl:`${N(v)} conversas`})), {pos:false});
-  statList("rede", INF.filter(i=>i.por).map(i=>{const p=INF.find(x=>x.id===i.por);return p?{l:`${p.nome} → ${i.nome}`, s:`${i.nome.split(" ")[0]} está no ${i.mes}º mês · comissão indireta sobre as matrículas dela`, v:`${i.mat} matr. indiretas`}:null;}).filter(Boolean));
+  statList("rede", INF.filter(i=>i.por).map(i=>{const p=INF.find(x=>x.id===i.por);return p?{l:`${p.nome} → ${i.nome}`, s:`${i.nome.split(" ")[0]} está no ${i.mes}º mês · ${i.mat} matrículas no período × R$ 50 para ${p.nome.split(" ")[0]}`, v:BRL(i.mat*50)}:null;}).filter(Boolean));
+  renderCad();
 
   /* Painel */
   const cur = $("sel-inf").value;
@@ -840,8 +859,8 @@ function render(){
     {l:"Cashback alunos", v:BRL(T.pagAl), d:`${ALUNOS.filter(x=>x.mat).length} alunos`},
   ]);
   table("tbl-pag-inf",[{t:"Influencer"},{t:"Fixo",num:1},{t:"Matr.",num:1},{t:"Comissão",num:1},{t:"Bônus",num:1},{t:"Indireta",num:1},{t:"Total",num:1}],
-    INF.map(i=>`<tr><td class="who"><b>${i.nome}</b><small>${i.h}</small></td><td class="num">${BRL(i.fixo)}</td><td class="num">${i.mat}</td><td class="num">${BRL(i.com)}</td><td class="num">${i.bonus?BRL(i.bonus):'–'}</td><td class="num">${INF.some(x=>x.por===i.id)?'<span class="tag warn">a definir</span>':'–'}</td><td class="num"><b>${BRL(i.total)}</b></td></tr>`),
-    `<td>Total</td><td class="num">${BRL(sum(INF,"fixo"))}</td><td class="num">${T.matInf}</td><td class="num">${BRL(sum(INF,"com"))}</td><td class="num">${BRL(sum(INF,"bonus"))}</td><td class="num">–</td><td class="num">${BRL(T.pagInf)}</td>`);
+    INF.map(i=>`<tr><td class="who"><b>${i.nome}</b><small>${i.h}</small></td><td class="num">${BRL(i.fixo)}</td><td class="num">${i.mat}</td><td class="num">${BRL(i.com)}</td><td class="num">${i.bonus?BRL(i.bonus):'–'}</td><td class="num">${i.ind?BRL(i.ind):'–'}</td><td class="num"><b>${BRL(i.total)}</b></td></tr>`),
+    `<td>Total</td><td class="num">${BRL(sum(INF,"fixo"))}</td><td class="num">${T.matInf}</td><td class="num">${BRL(sum(INF,"com"))}</td><td class="num">${BRL(sum(INF,"bonus"))}</td><td class="num">${BRL(sum(INF,"ind"))}</td><td class="num">${BRL(T.pagInf)}</td>`);
   table("tbl-pag-al",[{t:"Aluno"},{t:"Código"},{t:"Matrículas",num:1},{t:"Cashback",num:1}],
     ALUNOS.filter(x=>x.mat).map(x=>`<tr><td><b style="font-weight:600">${x.nome}</b></td><td>${x.cod}</td><td class="num">${x.mat}</td><td class="num"><b>${BRL(x.mat*200)}</b></td></tr>`),
     `<td>Total</td><td></td><td class="num">${T.matAl}</td><td class="num">${BRL(T.pagAl)}</td>`);
@@ -889,7 +908,7 @@ function renderPainel(){
     {l:"Fixo", s:`${BRL(i.fixoMes)}/mês · proporcional ao período`, v:BRL(i.fixo)},
     {l:"Comissão direta", s:`${i.mat} × R$ 250`, v:BRL(i.com)},
     {l:"Bônus", s:i.bonusQtd?`${i.bonusQtd} × R$ 1.000`:"nenhuma marca de 10 no período", v:BRL(i.bonus)},
-    ...(filhos.length?[{l:"Comissão indireta", s:`${filhos.map(x=>x.nome.split(" ")[0]).join(", ")} · ${sum(filhos,"mat")} matrículas`, v:"a definir"}]:[]),
+    ...(filhos.length?[{l:"Comissão indireta", s:`${filhos.map(x=>x.nome.split(" ")[0]).join(", ")} · ${i.indMat} × R$ 50 (não conta para o bônus)`, v:BRL(i.ind)}]:[]),
     {l:"Total", v:BRL(i.total)},
   ]);
   renderIA(i.id);
@@ -1017,6 +1036,38 @@ function aval(c){
 }
 const nota = c => aval(c).n;
 const corNota = n => n>=70?'var(--lime)':n>=50?'var(--warn)':'var(--bad)';
+const CAD_KEY = "wt-inf-novos";
+const cadLoad = () => { try{ return JSON.parse(localStorage.getItem(CAD_KEY)||"[]"); }catch(e){ return []; } };
+const cadSave = l => { try{ localStorage.setItem(CAD_KEY, JSON.stringify(l)); }catch(e){} };
+const cadBase = c => ({id:c.id, nome:c.nome, h:c.h, ini:new Date(c.ini+"T00:00"), leads:0, conv:0, agend:0, ns:0, mat:0, acum0:0, st:0, reels:0, cliqSt:0, cliqRe:0, por:c.por||null, novo:true});
+cadLoad().forEach(c=>INF_BASE.push(cadBase(c)));
+function renderCad(){
+  const sel = $("cad-por"); if(!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = `<option value="">Ninguém</option>` + INF_BASE.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join("");
+  sel.value = atual;
+  const f = $("cad-form"); if(f && !f.ini.value) f.ini.value = TODAY.toISOString().slice(0,10);
+  const l = cadLoad();
+  $("cad-lista").innerHTML = l.length ? l.map(c=>{const p=INF_BASE.find(x=>x.id===c.por);
+    return `<div class="it"><span>${esc(c.nome)} <span style="color:var(--muted)">${esc(c.h)}</span><small>início ${c.ini.split("-").reverse().join("/")} · indicado por ${p?esc(p.nome):"ninguém"}</small></span><b><button class="x-del" data-cad="${c.id}" title="Remover cadastro">×</button></b></div>`;}).join("") : "";
+}
+document.addEventListener("submit", e=>{
+  if(e.target.id!=="cad-form") return;
+  e.preventDefault();
+  const f = e.target, nome = f.nome.value.trim(); let h = f.h.value.trim();
+  if(!nome || !h || !f.ini.value) return;
+  if(!h.startsWith("@")) h = "@"+h.replace(/^https?:\/\/(www\.)?instagram\.com\//,"").replace(/\/.*$/,"");
+  const c = {id:"n"+Date.now().toString(36), nome, h, ini:f.ini.value, por:f.por.value||null};
+  const l = cadLoad(); l.push(c); cadSave(l); INF_BASE.push(cadBase(c));
+  f.nome.value=""; f.h.value=""; f.por.value="";
+  render();
+});
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-cad]"); if(!b) return;
+  const id = b.dataset.cad; cadSave(cadLoad().filter(c=>c.id!==id));
+  const k = INF_BASE.findIndex(x=>x.id===id); if(k>=0) INF_BASE.splice(k,1);
+  render();
+});
 const AV_KEY = "wt-avaliados";
 function avLoad(){ try{ return JSON.parse(localStorage.getItem(AV_KEY)||"[]"); }catch(e){ return []; } }
 function avSave(l){ try{ localStorage.setItem(AV_KEY, JSON.stringify(l)); }catch(e){} }
