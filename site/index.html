@@ -875,12 +875,12 @@ function renderPainel(){
   $("p-nome").textContent = `Olá, ${i.nome.split(" ")[0]}`;
   $("p-sub").textContent = `${i.h} · ${i.mes}º mês no programa · ${rank}º no ranking do período`;
   kpis("kpis-p",[
+    {l:"Matrículas", v:N(i.mat), d:`${i.acum} desde o início`, acc:true},
+    {l:"Faturamento consolidado", v:BRL(i.total), d:`a receber em ${MES_NOME[(RANGE.b.getMonth()+1)%12]}`, acc:true},
     {l:"Cliques no link", v:N(i.cliqSt+i.cliqRe)},
     {l:"Conversas iniciadas", v:N(i.conv)},
     {l:"Agendamentos", v:N(i.agend), d:`${P(i.agend,i.conv)} das conversas`},
     {l:"Reuniões", v:N(i.reun), d:`${i.ns} no-show`},
-    {l:"Matrículas", v:N(i.mat), d:`${i.acum} desde o início`, acc:true},
-    {l:"Faturamento consolidado", v:BRL(i.fixo+i.com), d:`a receber em ${MES_NOME[(RANGE.b.getMonth()+1)%12]}`},
   ]);
   funnel("funnel-p",[
     {l:"Conversas", v:i.conv},
